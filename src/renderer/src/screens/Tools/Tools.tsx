@@ -88,8 +88,19 @@ function parseEnvText(value: string): Record<string, string> {
   return env;
 }
 
-/** Prerequisites keyed by tool key. Null = always ready, string = guidance text. */
-const TOOL_PREREQS: Record<string, string | null> = {
+/** Keys to check per tool. Empty array = always ready. */
+const TOOL_ENV_KEYS: Record<string, string[]> = {
+  web: ["TAVILY_API_KEY", "BRAVE_API_KEY", "SERPER_API_KEY", "BING_API_KEY"],
+  image_gen: ["FAL_KEY", "REPLICATE_API_KEY"],
+  video: ["FAL_KEY", "REPLICATE_API_KEY"],
+  x_search: ["X_CONSUMER_KEY", "X_API_KEY"],
+  github: ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN"],
+  spotify: ["SPOTIFY_CLIENT_ID"],
+  notion: ["NOTION_TOKEN", "NOTION_API_KEY"],
+  google: ["GOOGLE_API_KEY", "GOOGLE_SEARCH_API_KEY"],
+};
+
+const TOOL_GUIDE: Record<string, string> = {
   web: "前往「服务商」页面设置搜索 Key（Tavily / Brave / Serper / Bing）",
   image_gen: "前往「服务商」页面设置图片生成 Key（FAL_KEY）",
   video: "前往「服务商」页面设置视频生成 Key",
@@ -98,19 +109,14 @@ const TOOL_PREREQS: Record<string, string | null> = {
   spotify: "前往「服务商」页面设置 Spotify API Key",
   notion: "前往「服务商」页面设置 Notion API Key",
   google: "前往「服务商」页面设置 Google API Key",
-  vision: null,   // depends on model capability
-  browser: null,   // auto-installs Playwright
-  terminal: null,  // always available
-  file: null,      // always available
-  code_execution: null,
-  skills: null,
-  memory: null,
-  tts: null,
-  canvas: null,
 };
 
-function getToolPrereq(key: string): string | null {
-  return TOOL_PREREQS[key] ?? null;
+function getToolPrereq(key: string, env: Record<string, string> | null): string | null {
+  const keys = TOOL_ENV_KEYS[key];
+  if (!keys) return null; // no requirements
+  if (!env) return TOOL_GUIDE[key]; // still loading
+  if (keys.some((k) => (env[k] ?? "").trim())) return null; // key found!
+  return TOOL_GUIDE[key];
 }
 
 function IconButton({
@@ -213,6 +219,7 @@ function Tools({
     showPlatformToolsets ? "tools" : "mcp",
   );
   const [toolsets, setToolsets] = useState<ToolsetInfo[]>([]);
+  const [envVars, setEnvVars] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [mcpError, setMcpError] = useState("");
@@ -226,12 +233,17 @@ function Tools({
     setLoading(true);
     setMcpError("");
     try {
-      const [list, mcp] = await Promise.all([
-        showPlatformToolsets
-          ? window.hermesAPI.getToolsets(profile)
-          : Promise.resolve([] as ToolsetInfo[]),
-        window.hermesAPI.listMcpServers(profile),
+      const envPromise = window.hermesAPI.getEnv(profile).catch(() => ({}));
+      const toolsPromise = showPlatformToolsets
+        ? window.hermesAPI.getToolsets(profile)
+        : Promise.resolve([] as ToolsetInfo[]);
+      const mcpPromise = window.hermesAPI.listMcpServers(profile);
+      const [env, list, mcp] = await Promise.all([
+        envPromise,
+        toolsPromise,
+        mcpPromise,
       ]);
+      setEnvVars(env as Record<string, string>);
       setToolsets(list);
       setMcpServers(mcp);
     } catch (err) {
@@ -430,7 +442,7 @@ function Tools({
             <>
               <div className="tools-grid">
                 {toolsets.map((t) => {
-                  const prereq = getToolPrereq(t.key);
+                  const prereq = getToolPrereq(t.key, envVars);
                   const ready = !prereq;
                   return (
                   <div
