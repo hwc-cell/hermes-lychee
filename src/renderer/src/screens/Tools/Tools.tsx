@@ -78,31 +78,6 @@ function parseArgsText(value: string): string[] {
 
 function parseEnvText(value: string): Record<string, string> {
   const env: Record<string, string> = {};
-
-/** Check if a built-in tool needs global config. Returns guidance text
- *  or null when the tool is always ready. */
-function getToolPrereq(key: string, env: Record<string, string> | null): string | null {
-  const has = (names: string[]): boolean =>
-    env !== null && names.some((n) => (env[n] ?? "").trim());
-
-  switch (key) {
-    case "browser":
-      return null; // Playwright auto-installs
-    case "web":
-      if (has(["TAVILY_API_KEY", "BRAVE_API_KEY", "SERPER_API_KEY", "BING_API_KEY"]))
-        return null;
-      return "前往「服务商」页面设置搜索 Key";
-    case "image_gen":
-      if (has(["FAL_KEY", "REPLICATE_API_KEY"])) return null;
-      return "前往「服务商」页面设置图片生成 Key";
-    case "vision":
-      return null; // depends on model, always available
-    case "tts":
-      return null; // depends on model
-    default:
-      return null;
-  }
-}};
   for (const line of value.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -111,6 +86,31 @@ function getToolPrereq(key: string, env: Record<string, string> | null): string 
     env[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1);
   }
   return env;
+}
+
+/** Prerequisites keyed by tool key. Null = always ready, string = guidance text. */
+const TOOL_PREREQS: Record<string, string | null> = {
+  web: "前往「服务商」页面设置搜索 Key（Tavily / Brave / Serper / Bing）",
+  image_gen: "前往「服务商」页面设置图片生成 Key（FAL_KEY）",
+  video: "前往「服务商」页面设置视频生成 Key",
+  x_search: "前往「服务商」页面设置 X/Twitter API Key",
+  github: "前往「服务商」页面设置 GitHub Token",
+  spotify: "前往「服务商」页面设置 Spotify API Key",
+  notion: "前往「服务商」页面设置 Notion API Key",
+  google: "前往「服务商」页面设置 Google API Key",
+  vision: null,   // depends on model capability
+  browser: null,   // auto-installs Playwright
+  terminal: null,  // always available
+  file: null,      // always available
+  code_execution: null,
+  skills: null,
+  memory: null,
+  tts: null,
+  canvas: null,
+};
+
+function getToolPrereq(key: string): string | null {
+  return TOOL_PREREQS[key] ?? null;
 }
 
 function IconButton({
@@ -213,7 +213,6 @@ function Tools({
     showPlatformToolsets ? "tools" : "mcp",
   );
   const [toolsets, setToolsets] = useState<ToolsetInfo[]>([]);
-  const [envVars, setEnvVars] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [mcpError, setMcpError] = useState("");
@@ -227,17 +226,12 @@ function Tools({
     setLoading(true);
     setMcpError("");
     try {
-      const envPromise = window.hermesAPI.getEnv(profile).catch(() => ({}));
-      const toolsPromise = showPlatformToolsets
-        ? window.hermesAPI.getToolsets(profile)
-        : Promise.resolve([] as ToolsetInfo[]);
-      const mcpPromise = window.hermesAPI.listMcpServers(profile);
-      const [env, list, mcp] = await Promise.all([
-        envPromise,
-        toolsPromise,
-        mcpPromise,
+      const [list, mcp] = await Promise.all([
+        showPlatformToolsets
+          ? window.hermesAPI.getToolsets(profile)
+          : Promise.resolve([] as ToolsetInfo[]),
+        window.hermesAPI.listMcpServers(profile),
       ]);
-      setEnvVars(env as Record<string, string>);
       setToolsets(list);
       setMcpServers(mcp);
     } catch (err) {
@@ -436,12 +430,12 @@ function Tools({
             <>
               <div className="tools-grid">
                 {toolsets.map((t) => {
-                  const prereq = getToolPrereq(t.key, envVars);
+                  const prereq = getToolPrereq(t.key);
                   const ready = !prereq;
                   return (
                   <div
                     key={t.key}
-                    className={`tools-card ${t.enabled ? "tools-card-enabled" : "tools-card-disabled"}`}
+                    className={`tools-card ${t.enabled ? "tools-card-enabled" : "tools-card-disabled"}${!ready ? " not-ready" : ""}`}
                     onClick={() => ready && handleToggle(t.key, t.enabled)}
                     style={ready ? {} : { cursor: "not-allowed", opacity: 0.65 }}
                     title={ready ? undefined : prereq}
