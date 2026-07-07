@@ -30,6 +30,11 @@ npm install
 npm run dev
 ```
 
-## 上游
+## 上游 & 作者
 
-本仓库是 [fathah/hermes-desktop](https://github.com/fathah/hermes-desktop) 的 fork，感谢原作者的出色工作。
+| 角色 | 项目 | 作者 |
+|---|---|---|
+| 🏗️ **原作者** | [fathah/hermes-desktop](https://github.com/fathah/hermes-desktop) | [fathah](https://github.com/fathah) |
+| 🍒 **汉化改编** | [hwc-cell/hermes-lychee](https://github.com/hwc-cell/hermes-lychee) | 玮晨 — [B站](https://space.bilibili.com/3493128967293256) |
+
+感谢原作者的出色工作！
