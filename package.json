@@ -1,6 +1,6 @@
 {
   "name": "hermes-lychee",
-  "version": "0.7.3",
+  "version": "1.0.0",
   "description": "Hermes Lychee — 基于 hermes-desktop 改进的 AI 智能助手桌面端",
   "main": "./out/main/index.js",
   "author": "Hermes Lychee (based on fathah/hermes-desktop)",
