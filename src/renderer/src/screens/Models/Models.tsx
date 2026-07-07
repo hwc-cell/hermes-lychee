@@ -495,11 +495,19 @@ function Models({
   /** Dedicated service options for tasks that don't need a full LLM. */
   const AUX_DEDICATED_SERVICES: Record<string, { value: string; label: string; guide: string }[]> = {
     vision: [
-      { value: "fal", label: "FAL.ai 视觉服务", guide: "使用 FAL_KEY 环境变量中的 API Key，无需指定模型名" },
+      { value: "fal", label: "FAL.ai 视觉服务", guide: "使用 FAL_KEY，无需指定模型名" },
+      { value: "openai-vision", label: "OpenAI 视觉", guide: "使用 OPENAI_API_KEY，自动调用 gpt-4o 视觉能力" },
+      { value: "google-vision", label: "Google Vision AI", guide: "使用 GOOGLE_API_KEY" },
+      { value: "aliyun-vision", label: "阿里云视觉智能", guide: "使用 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET" },
+      { value: "baidu-vision", label: "百度图像识别", guide: "使用 BAIDU_ACCESS_KEY / BAIDU_SECRET_KEY" },
+      { value: "tencent-vision", label: "腾讯云图像分析", guide: "使用 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY" },
     ],
     web_extract: [
-      { value: "firecrawl", label: "Firecrawl 网页抓取", guide: "使用 FIRECRAWL_API_KEY 环境变量" },
-      { value: "jina", label: "Jina AI 网页读取", guide: "使用 JINA_API_KEY 环境变量" },
+      { value: "firecrawl", label: "Firecrawl 网页抓取", guide: "使用 FIRECRAWL_API_KEY" },
+      { value: "jina", label: "Jina AI 网页读取", guide: "使用 JINA_API_KEY" },
+      { value: "diffbot", label: "Diffbot 结构化提取", guide: "使用 DIFFBOT_TOKEN" },
+      { value: "scrapingbee", label: "ScrapingBee 网页爬取", guide: "使用 SCRAPINGBEE_API_KEY" },
+      { value: "bazhuayu", label: "八爪鱼采集器", guide: "使用 BAZHUAYU_API_KEY" },
     ],
   };
 
