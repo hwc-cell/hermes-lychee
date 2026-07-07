@@ -1,4 +1,4 @@
-appId: com.nousresearch.hermes
+appId: com.hermes-lychee.app
 productName: Hermes Lychee
 directories:
   buildResources: build
@@ -47,15 +47,13 @@ linux:
     - snap
     - deb
     - rpm
-  maintainer: electronjs.org
-  vendor: Nous Research
+  maintainer: hwc-cell
+  vendor: Hermes Lychee
   category: Utility
-  synopsis: Self-improving AI assistant desktop app
+  synopsis: 基于 hermes-desktop 的中文本地化 AI 智能桌面助手
   description: >-
-    Hermes Lychee is a native desktop app for installing, configuring, and chatting
-    with Hermes Agent — a self-improving AI assistant with tool use, multi-platform
-    messaging, and a closed learning loop.
-    Built on top of fathah/hermes-desktop.
+    Hermes Lychee 是基于 fathah/hermes-desktop 的中文本地化魔改版，
+    开箱支持国产大模型，面向小白用户。
 appImage:
   artifactName: ${name}-${version}.${ext}
 deb:
@@ -70,5 +68,5 @@ rpm:
 npmRebuild: false
 publish:
   provider: github
-  owner: fathah
-  repo: hermes-desktop
+  owner: hwc-cell
+  repo: hermes-lychee
