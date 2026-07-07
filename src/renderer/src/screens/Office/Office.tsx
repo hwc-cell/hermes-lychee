@@ -89,13 +89,12 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
   }, [visible, gpuStatus]);
 
   const handleReenableGpu = useCallback(async () => {
-    setReenabling(true);
     try {
       // On success the app relaunches out from under us; reaching the catch or
       // a `false` result means the env var blocks it (banner already says so).
       await window.hermesAPI.reenableGpu();
     } catch {
-      setReenabling(false);
+      // app will auto-relaunch on success; ignore errors
     }
   }, []);
 
@@ -319,7 +318,7 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
           >
             {t("office.noAgents")}
           </div>
-        ) : (
+        ) : visible ? (
           <Office3D
             agents={positionedAgents}
             selectedId={selectedId}
@@ -327,9 +326,18 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
             devMode={devMode}
             onDevLog={setDevLog}
           />
+        ) : (
+          <div
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "var(--bg-primary)", opacity: 0.3, fontSize: 13,
+              color: "var(--text-muted)",
+            }}
+          >
+            3D 引擎已暂停（离开工作区自动释放 GPU 资源）
+          </div>
         )}
-
-        {/* The old gpu notice banner is redundant now — show static page above */}
 
         {import.meta.env.DEV && devMode && (
           <div
