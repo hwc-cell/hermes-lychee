@@ -583,6 +583,7 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
                   onToggle={togglePlatform}
                   onToggleToolset={togglePlatformToolset}
                   onToggleVisibility={toggleVisibility}
+                  envVars={envVars}
                 />
               ))}
             </div>
@@ -614,6 +615,7 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
               onToggle={togglePlatform}
               onToggleToolset={togglePlatformToolset}
               onToggleVisibility={toggleVisibility}
+              envVars={envVars}
             />
           ))}
         </div>
@@ -775,6 +777,7 @@ interface PlatformCardProps {
   onToggleVisibility: (platformId: string, fieldKey: string) => void;
   platform: MessagingPlatformInfo;
   visibleKeys: Set<string>;
+  envVars: Record<string, string> | null;
 }
 
 function PlatformCard({
@@ -791,6 +794,7 @@ function PlatformCard({
   onToggleVisibility,
   platform,
   visibleKeys,
+  envVars,
 }: PlatformCardProps): React.JSX.Element {
   const { t } = useI18n();
   const [modalOpen, setModalOpen] = useState(false);
