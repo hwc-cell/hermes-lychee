@@ -748,28 +748,16 @@ export const SETTINGS_SECTIONS: SectionDef[] = [
       },
     ],
   },
+  // ── 专门服务（非 LLM，无需选模型）──────────────────────
   {
-    title: "constants.sectionToolApiKeys",
+    title: "constants.sectionWebSearch",
     items: [
-      {
-        key: "EXA_API_KEY",
-        label: "constants.exaApiKey",
-        type: "password",
-        hint: "constants.exaHint",
-      },
-      {
-        key: "PARALLEL_API_KEY",
-        label: "constants.parallelApiKey",
-        type: "password",
-        hint: "constants.parallelHint",
-      },
       {
         key: "TAVILY_API_KEY",
         label: "constants.tavilyApiKey",
         type: "password",
         hint: "constants.tavilyHint",
       },
-      // 联网搜索服务商
       {
         key: "BRAVE_API_KEY",
         label: "constants.braveApiKey",
@@ -789,22 +777,38 @@ export const SETTINGS_SECTIONS: SectionDef[] = [
         hint: "constants.bingHint",
       },
       {
+        key: "EXA_API_KEY",
+        label: "constants.exaApiKey",
+        type: "password",
+        hint: "constants.exaHint",
+      },
+      {
+        key: "PARALLEL_API_KEY",
+        label: "constants.parallelApiKey",
+        type: "password",
+        hint: "constants.parallelHint",
+      },
+    ],
+  },
+  {
+    title: "constants.sectionWebScraping",
+    items: [
+      {
         key: "FIRECRAWL_API_KEY",
         label: "constants.firecrawlApiKey",
         type: "password",
         hint: "constants.firecrawlHint",
       },
+    ],
+  },
+  {
+    title: "constants.sectionImageGen",
+    items: [
       {
         key: "FAL_KEY",
         label: "constants.falKey",
         type: "password",
         hint: "constants.falHint",
-      },
-      {
-        key: "HONCHO_API_KEY",
-        label: "constants.honchoApiKey",
-        type: "password",
-        hint: "constants.honchoHint",
       },
     ],
   },

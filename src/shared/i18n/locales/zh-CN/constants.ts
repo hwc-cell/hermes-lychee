@@ -62,9 +62,12 @@ export default {
   themeDark: "深色",
   // Settings section titles
   sectionLlmProviders: "大模型服务商",
+  sectionWebSearch: "联网搜索",
+  sectionWebScraping: "网页抓取",
+  sectionImageGen: "图片生成",
   sectionToolApiKeys: "工具 API Key",
-  sectionBrowserAutomation: "浏览器与自动化",
-  sectionVoiceStt: "语音与语音识别",
+  sectionBrowserAutomation: "浏览器自动化",
+  sectionVoiceStt: "语音识别",
   sectionResearchTraining: "研究与训练",
   // Settings field labels
   aimlapiApiKey: "AIML API Key",
