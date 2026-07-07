@@ -75,6 +75,25 @@ export function modelConfigBaseUrlForProvider(
 
 export type ModelsTab = "models" | "auxiliary";
 
+/** Dedicated service options for auxiliary tasks that don't need a full LLM. */
+const AUX_DEDICATED_SERVICES: Record<string, { value: string; label: string; guide: string }[]> = {
+  vision: [
+    { value: "fal", label: "FAL.ai 视觉服务", guide: "使用 FAL_KEY，无需指定模型名" },
+    { value: "openai-vision", label: "OpenAI 视觉", guide: "使用 OPENAI_API_KEY，自动调用 gpt-4o 视觉能力" },
+    { value: "google-vision", label: "Google Vision AI", guide: "使用 GOOGLE_API_KEY" },
+    { value: "aliyun-vision", label: "阿里云视觉智能", guide: "使用 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET" },
+    { value: "baidu-vision", label: "百度图像识别", guide: "使用 BAIDU_ACCESS_KEY / BAIDU_SECRET_KEY" },
+    { value: "tencent-vision", label: "腾讯云图像分析", guide: "使用 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY" },
+  ],
+  web_extract: [
+    { value: "firecrawl", label: "Firecrawl 网页抓取", guide: "使用 FIRECRAWL_API_KEY" },
+    { value: "jina", label: "Jina AI 网页读取", guide: "使用 JINA_API_KEY" },
+    { value: "diffbot", label: "Diffbot 结构化提取", guide: "使用 DIFFBOT_TOKEN" },
+    { value: "scrapingbee", label: "ScrapingBee 网页爬取", guide: "使用 SCRAPINGBEE_API_KEY" },
+    { value: "bazhuayu", label: "八爪鱼采集器", guide: "使用 BAZHUAYU_API_KEY" },
+  ],
+};
+
 interface ModelsProps {
   visible?: boolean;
   activeTab?: ModelsTab;
@@ -119,11 +138,13 @@ function Models({
     auxFormProvider === "custom" || localPresetForProvider(auxFormProvider)
       ? auxFormBaseUrl
       : undefined;
+  const taskDedicatedServices = auxEditingTask ? (AUX_DEDICATED_SERVICES[auxEditingTask] ?? []) : [];
+  const isDedicatedService = taskDedicatedServices.some((s) => s.value === auxFormProvider);
   const [auxDiscoveryRefresh, setAuxDiscoveryRefresh] = useState(0);
   const auxDiscovery = useDiscoveredModels({
     provider: auxFormProvider,
     baseUrl: auxDiscoveryBaseUrl,
-    enabled: showAuxModal && auxFormProvider !== "auto",
+    enabled: showAuxModal && auxFormProvider !== "auto" && !isDedicatedService,
     refreshToken: auxDiscoveryRefresh,
   });
   const auxDiscoveryListId = "aux-modal-discovery";
@@ -492,27 +513,6 @@ function Models({
     },
   };
 
-  /** Dedicated service options for tasks that don't need a full LLM. */
-  const AUX_DEDICATED_SERVICES: Record<string, { value: string; label: string; guide: string }[]> = {
-    vision: [
-      { value: "fal", label: "FAL.ai 视觉服务", guide: "使用 FAL_KEY，无需指定模型名" },
-      { value: "openai-vision", label: "OpenAI 视觉", guide: "使用 OPENAI_API_KEY，自动调用 gpt-4o 视觉能力" },
-      { value: "google-vision", label: "Google Vision AI", guide: "使用 GOOGLE_API_KEY" },
-      { value: "aliyun-vision", label: "阿里云视觉智能", guide: "使用 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET" },
-      { value: "baidu-vision", label: "百度图像识别", guide: "使用 BAIDU_ACCESS_KEY / BAIDU_SECRET_KEY" },
-      { value: "tencent-vision", label: "腾讯云图像分析", guide: "使用 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY" },
-    ],
-    web_extract: [
-      { value: "firecrawl", label: "Firecrawl 网页抓取", guide: "使用 FIRECRAWL_API_KEY" },
-      { value: "jina", label: "Jina AI 网页读取", guide: "使用 JINA_API_KEY" },
-      { value: "diffbot", label: "Diffbot 结构化提取", guide: "使用 DIFFBOT_TOKEN" },
-      { value: "scrapingbee", label: "ScrapingBee 网页爬取", guide: "使用 SCRAPINGBEE_API_KEY" },
-      { value: "bazhuayu", label: "八爪鱼采集器", guide: "使用 BAZHUAYU_API_KEY" },
-    ],
-  };
-
-  const taskDedicatedServices = auxEditingTask ? (AUX_DEDICATED_SERVICES[auxEditingTask] ?? []) : [];
-
   function openAuxEdit(task: string): void {
     const current = auxConfig.find((c) => c.task === task);
     setAuxEditingTask(task);
@@ -778,9 +778,16 @@ function Models({
                   <div className="settings-field-hint">{t(labels.hint)}</div>
                   {task.provider !== "auto" && (
                     <div className="aux-task-details">
-                      <span className="aux-task-provider">{task.provider}</span>
+                      <span className="aux-task-provider">
+                        {AUX_DEDICATED_SERVICES[task.task]?.find((s) => s.value === task.provider)?.label
+                          || PROVIDERS.labels[task.provider]
+                          || task.provider}
+                      </span>
                       {task.model && (
                         <span className="aux-task-model">{task.model}</span>
+                      )}
+                      {!task.model && AUX_DEDICATED_SERVICES[task.task]?.some((s) => s.value === task.provider) && (
+                        <span className="aux-task-model" style={{ color: "var(--ok)" }}>专用服务</span>
                       )}
                     </div>
                   )}
