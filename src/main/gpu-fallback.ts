@@ -231,6 +231,31 @@ function persistGpuDisabled(): boolean {
   }
 }
 
+/** Clear GPU-related cache directories only (not Preferences or Local Storage).
+ *  Called after a GPU crash to prevent the next launch from loading stale
+ *  shader caches. These caches are regenerated automatically by Chromium. */
+function clearGpuCaches(): void {
+  const userData = app.getPath("userData");
+  const cacheDirs = [
+    "GPUCache",
+    "DawnGraphiteCache",
+    "DawnWebGPUCache",
+    "ShaderCache",
+    "GrShaderCache",
+  ];
+  for (const dir of cacheDirs) {
+    try {
+      const p = join(userData, dir);
+      if (existsSync(p)) {
+        rmSync(p, { recursive: true, force: true });
+        console.warn(`[GPU] Cleared corrupted GPU cache: ${dir}`);
+      }
+    } catch {
+      // Non-fatal: next launch will still try fresh caches
+    }
+  }
+}
+
 export function getGpuStatus(): GpuStatus {
   const preference = getGpuPreference();
   // Outside the real boot path (tests, or callers before applyGpuPreferences)
@@ -340,6 +365,10 @@ export function installGpuCrashGuard(): void {
     // next launch honors their choice and tries hardware acceleration again.
     const forcedOn = getGpuPreference() === "on";
     const persisted = forcedOn ? false : persistGpuDisabled();
+    // Clear corrupted GPU caches so the relaunched process starts clean.
+    // This prevents the next launch from crashing again due to stale shader
+    // cache files, while keeping Preferences and session history intact.
+    clearGpuCaches();
     if (!forcedOn && !persisted) {
       console.error(
         "[GPU] Could not persist disable-gpu.flag (read-only/locked filesystem?). " +
