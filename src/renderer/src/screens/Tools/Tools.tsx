@@ -78,6 +78,31 @@ function parseArgsText(value: string): string[] {
 
 function parseEnvText(value: string): Record<string, string> {
   const env: Record<string, string> = {};
+
+/** Check if a built-in tool needs global config. Returns guidance text
+ *  or null when the tool is always ready. */
+function getToolPrereq(key: string, env: Record<string, string> | null): string | null {
+  const has = (names: string[]): boolean =>
+    env !== null && names.some((n) => (env[n] ?? "").trim());
+
+  switch (key) {
+    case "browser":
+      return null; // Playwright auto-installs
+    case "web":
+      if (has(["TAVILY_API_KEY", "BRAVE_API_KEY", "SERPER_API_KEY", "BING_API_KEY"]))
+        return null;
+      return "前往「服务商」页面设置搜索 Key";
+    case "image_gen":
+      if (has(["FAL_KEY", "REPLICATE_API_KEY"])) return null;
+      return "前往「服务商」页面设置图片生成 Key";
+    case "vision":
+      return null; // depends on model, always available
+    case "tts":
+      return null; // depends on model
+    default:
+      return null;
+  }
+}};
   for (const line of value.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -188,6 +213,7 @@ function Tools({
     showPlatformToolsets ? "tools" : "mcp",
   );
   const [toolsets, setToolsets] = useState<ToolsetInfo[]>([]);
+  const [envVars, setEnvVars] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [mcpError, setMcpError] = useState("");
@@ -201,12 +227,17 @@ function Tools({
     setLoading(true);
     setMcpError("");
     try {
-      const [list, mcp] = await Promise.all([
-        showPlatformToolsets
-          ? window.hermesAPI.getToolsets(profile)
-          : Promise.resolve([]),
-        window.hermesAPI.listMcpServers(profile),
+      const envPromise = window.hermesAPI.getEnv(profile).catch(() => ({}));
+      const toolsPromise = showPlatformToolsets
+        ? window.hermesAPI.getToolsets(profile)
+        : Promise.resolve([] as ToolsetInfo[]);
+      const mcpPromise = window.hermesAPI.listMcpServers(profile);
+      const [env, list, mcp] = await Promise.all([
+        envPromise,
+        toolsPromise,
+        mcpPromise,
       ]);
+      setEnvVars(env as Record<string, string>);
       setToolsets(list);
       setMcpServers(mcp);
     } catch (err) {
@@ -404,11 +435,16 @@ function Tools({
           {showPlatformToolsets && activeTab === "tools" && (
             <>
               <div className="tools-grid">
-                {toolsets.map((t) => (
+                {toolsets.map((t) => {
+                  const prereq = getToolPrereq(t.key, envVars);
+                  const ready = !prereq;
+                  return (
                   <div
                     key={t.key}
                     className={`tools-card ${t.enabled ? "tools-card-enabled" : "tools-card-disabled"}`}
-                    onClick={() => handleToggle(t.key, t.enabled)}
+                    onClick={() => ready && handleToggle(t.key, t.enabled)}
+                    style={ready ? {} : { cursor: "not-allowed", opacity: 0.65 }}
+                    title={ready ? undefined : prereq}
                   >
                     <div className="tools-card-top">
                       <ToolIcon toolKey={t.key} />
@@ -419,6 +455,7 @@ function Tools({
                         <input
                           type="checkbox"
                           checked={t.enabled}
+                          disabled={!ready}
                           onChange={() => handleToggle(t.key, t.enabled)}
                         />
                         <span className="tools-toggle-track" />
@@ -428,8 +465,22 @@ function Tools({
                     <div className="tools-card-description">
                       {t.description}
                     </div>
+                    {!ready && (
+                      <div style={{
+                        fontSize: 11, color: "var(--warning)", marginTop: 6,
+                      }}>
+                        ⚠ {prereq}
+                      </div>
+                    )}
+                    {t.enabled && !ready && (
+                      <div style={{
+                        fontSize: 11, color: "var(--error)", marginTop: 2,
+                      }}>
+                        已开启但条件不满足
+                      </div>
+                    )}
                   </div>
-                ))}
+                )})}
               </div>
             </>
           )}
