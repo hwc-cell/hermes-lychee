@@ -641,6 +641,57 @@ const ENV_DEFINITIONS: Record<string, MessagingEnvDefinition> = {
   },
 };
 
+/** Chinese translations for platform names & descriptions. Omitted keys fall
+ *  through to the original English value. */
+const ZH_NAMES: Record<string, string> = {
+  telegram: "Telegram",
+  discord: "Discord",
+  slack: "Slack",
+  mattermost: "Mattermost",
+  matrix: "Matrix",
+  whatsapp: "WhatsApp",
+  signal: "Signal",
+  bluebubbles: "iMessage（BlueBubbles）",
+  homeassistant: "Home Assistant 智能家居",
+  email: "邮件",
+  sms: "短信（Twilio）",
+  dingtalk: "钉钉",
+  feishu: "飞书",
+  wecom: "企业微信（群机器人）",
+  wecom_callback: "企业微信（应用）",
+  weixin: "微信公众号",
+  qqbot: "QQ Bot",
+  yuanbao: "元宝",
+  api_server: "API 服务器",
+  webhook: "Webhooks",
+};
+
+const ZH_DESCS: Record<string, string> = {
+  telegram: "在 Telegram 私聊、群组中使用 Hermes。",
+  discord: "在 Discord 服务器中使用 Hermes。",
+  slack: "在 Slack 工作区中使用 Hermes。",
+  mattermost: "在 Mattermost 团队中使用 Hermes。",
+  whatsapp: "在 WhatsApp 对话中使用 Hermes。",
+  dingtalk: "将 Hermes 接入钉钉群聊。",
+  feishu: "在飞书中使用 Hermes。",
+  wecom: "通过 Webhook 向企业微信群发送消息。",
+  wecom_callback: "通过回调应用实现企业微信双向互通。",
+  weixin: "接入微信公众号。",
+  qqbot: "接入 QQ Bot。",
+  email: "通过邮件与 Hermes 交互。",
+  sms: "通过短信与 Hermes 交互（需 Twilio）。",
+};
+
+function translatePlatform(p: MessagingPlatformDefinition): MessagingPlatformDefinition {
+  return {
+    ...p,
+    name: ZH_NAMES[p.id] ?? p.name,
+    description: ZH_DESCS[p.id] ?? p.description,
+  };
+}
+
+// ── Catalog ──
+
 export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "telegram",
@@ -928,7 +979,7 @@ export function buildMessagingPlatforms(
   return {
     editable: true,
     source: "desktop",
-    platforms: MESSAGING_PLATFORM_CATALOG.map((platform) =>
+    platforms: MESSAGING_PLATFORM_CATALOG.map(translatePlatform).map((platform) =>
       buildMessagingPlatform(
         platform,
         env,
