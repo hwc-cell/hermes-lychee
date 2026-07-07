@@ -1,4 +1,4 @@
-appId: com.hermes-lychee.app
+appId: com.nousresearch.hermes
 productName: Hermes Lychee
 directories:
   buildResources: build
