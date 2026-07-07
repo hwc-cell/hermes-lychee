@@ -99,24 +99,62 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
   }, [profile]);
 
   const platforms = catalog?.platforms ?? [];
-  const filteredPlatforms = useMemo(() => {
+
+  // Chinese domestic platforms — shown first in a dedicated section
+  const CN_PLATFORM_IDS = new Set([
+    "weixin", "wecom", "wecom_callback", "feishu", "dingtalk", "qqbot", "yuanbao",
+  ]);
+
+  // Friendly Chinese names and quick-setup guides for domestic platforms
+  const CN_PLATFORM_META: Record<string, { name: string; desc: string }> = {
+    weixin: {
+      name: "微信",
+      desc: "接入微信公众号，私聊和群聊都能用",
+    },
+    wecom: {
+      name: "企业微信（群机器人）",
+      desc: "通过 Webhook 群机器人发送消息",
+    },
+    wecom_callback: {
+      name: "企业微信（应用）",
+      desc: "完整双向集成，支持私聊和群聊",
+    },
+    feishu: {
+      name: "飞书",
+      desc: "接入飞书工作区，支持线程和流式消息",
+    },
+    dingtalk: {
+      name: "钉钉",
+      desc: "接入钉钉工作区，支持图片和文件",
+    },
+    qqbot: {
+      name: "QQ 机器人",
+      desc: "通过官方 QQ Bot 协议接入",
+    },
+    yuanbao: {
+      name: "腾讯元宝",
+      desc: "零配置接入，无需填写凭据",
+    },
+  };
+  const { cnPlatforms, intlPlatforms } = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return platforms;
-    return platforms.filter((platform) => {
-      const haystack = [
-        platform.name,
-        platform.id,
-        platform.description,
-        ...platform.env_vars.map((field) => field.key),
-        ...(platform.toolsets ?? []).flatMap((toolset) => [
-          toolset.key,
-          toolset.label,
-        ]),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(needle);
-    });
+    const cn: MessagingPlatformInfo[] = [];
+    const intl: MessagingPlatformInfo[] = [];
+    for (const p of platforms) {
+      const meta = CN_PLATFORM_META[p.id];
+      // Override name/desc with Chinese-friendly versions for domestic platforms
+      const localized = meta
+        ? { ...p, name: meta.name, description: meta.desc }
+        : p;
+      const match = !needle || [
+        localized.name, localized.id, localized.description,
+        ...p.env_vars.map((f) => f.key),
+        ...(p.toolsets ?? []).flatMap((t) => [t.key, t.label]),
+      ].join(" ").toLowerCase().includes(needle);
+      if (!match) continue;
+      (CN_PLATFORM_IDS.has(p.id) ? cn : intl).push(localized);
+    }
+    return { cnPlatforms: cn, intlPlatforms: intl };
   }, [platforms, query]);
 
   async function toggleGateway(): Promise<void> {
@@ -476,8 +514,47 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
 
       <div className="settings-section gateway-platform-section">
         <div className="settings-section-title">{t("gateway.platforms")}</div>
-        <div className="gateway-platform-grid">
-          {filteredPlatforms.map((platform) => (
+
+        {/* 国内平台快捷接入 */}
+        {cnPlatforms.length > 0 && (
+          <div className="gateway-cn-section">
+            <div className="gateway-cn-header">
+              <span className="gateway-cn-badge">国内平台</span>
+              <span className="gateway-cn-hint">一键接入微信、飞书、钉钉、企微等国内应用</span>
+            </div>
+            <div className="gateway-platform-grid">
+              {cnPlatforms.map((platform) => (
+                <PlatformCard
+                  key={platform.id}
+                  platform={platform}
+                  draft={drafts[platform.id] ?? {}}
+                  isBusy={busyPlatform === platform.id}
+                  message={messages[platform.id] ?? null}
+                  visibleKeys={visibleKeys}
+                  clearedKeys={clearedKeys}
+                  onChange={handleChange}
+                  onClear={clearField}
+                  onSave={savePlatform}
+                  onTest={testPlatform}
+                  onToggle={togglePlatform}
+                  onToggleToolset={togglePlatformToolset}
+                  onToggleVisibility={toggleVisibility}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 国际平台 */}
+        {intlPlatforms.length > 0 && (
+          <>
+            {cnPlatforms.length > 0 && (
+              <div className="gateway-cn-header" style={{ marginTop: 24 }}>
+                <span className="gateway-cn-badge" style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>其他平台</span>
+              </div>
+            )}
+            <div className="gateway-platform-grid">
+              {intlPlatforms.map((platform) => (
             <PlatformCard
               key={platform.id}
               platform={platform}
@@ -496,10 +573,139 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
             />
           ))}
         </div>
-        {filteredPlatforms.length === 0 && (
+          </>
+        )}
+
+        {cnPlatforms.length === 0 && intlPlatforms.length === 0 && (
           <div className="gateway-empty-state">{t("gateway.emptyState")}</div>
         )}
       </div>
+
+      {/* 国内平台接入指南 */}
+      <ConnectGuide />
+
+    </div>
+  );
+}
+
+/** Collapsible step-by-step guide for connecting Chinese messaging platforms */
+function ConnectGuide(): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+
+  const guides = [
+    {
+      key: "wechat",
+      emoji: "💬",
+      name: "微信（微信公众号）",
+      steps: [
+        "前往微信公众平台 → 开发 → 基本配置",
+        "获取 AppID 并设置为服务器配置的 Token",
+        "将 Token 和 AppID 填入上方微信卡片",
+        "配置服务器 URL 为你的公网地址（需 HTTPS）",
+        "启用平台 → 启动网关 → 测试连接",
+      ],
+      link: "https://mp.weixin.qq.com",
+      linkLabel: "微信公众平台",
+    },
+    {
+      key: "wecom",
+      emoji: "🏢",
+      name: "企业微信（群机器人）",
+      steps: [
+        "在企微群聊中 → 右上角「…」→ 群机器人 → 添加",
+        "复制生成的 Webhook 地址中的 key 参数（即 Bot ID）",
+        "将 Bot ID 填入上方「企业微信（群机器人）」卡片",
+        "启用平台 → 启动网关 → 测试连接",
+      ],
+      link: "https://work.weixin.qq.com",
+      linkLabel: "企业微信管理后台",
+    },
+    {
+      key: "feishu",
+      emoji: "🐦",
+      name: "飞书",
+      steps: [
+        "前往飞书开发者后台 → 创建企业自建应用",
+        "获取 App ID 和 App Secret",
+        "在应用功能中开启「机器人」能力",
+        "将 App ID / App Secret 填入上方飞书卡片",
+        "配置事件订阅地址为你的公网地址",
+        "启用平台 → 启动网关 → 测试连接",
+      ],
+      link: "https://open.feishu.cn/app",
+      linkLabel: "飞书开发者后台",
+    },
+    {
+      key: "dingtalk",
+      emoji: "📌",
+      name: "钉钉",
+      steps: [
+        "前往钉钉开发者后台 → 创建企业内部应用",
+        "获取 Client ID（AppKey）和 Client Secret（AppSecret）",
+        "在应用功能中添加「机器人」和「消息推送」",
+        "将凭据填入上方钉钉卡片",
+        "启用平台 → 启动网关 → 测试连接",
+      ],
+      link: "https://open.dingtalk.com",
+      linkLabel: "钉钉开发者后台",
+    },
+    {
+      key: "qqbot",
+      emoji: "🐧",
+      name: "QQ 机器人",
+      steps: [
+        "前往 QQ 开放平台 → 创建机器人",
+        "获取 App ID 和 Client Secret",
+        "配置机器人权限和消息接口",
+        "将凭据填入上方 QQ 机器人卡片",
+        "启用平台 → 启动网关 → 测试连接",
+      ],
+      link: "https://q.qq.com",
+      linkLabel: "QQ 开放平台",
+    },
+  ];
+
+  return (
+    <div className="settings-section gateway-guide-section">
+      <button
+        className="gateway-guide-toggle"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="gateway-guide-title">📖 如何连接国内平台？</span>
+        <span style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>
+          ▼
+        </span>
+      </button>
+
+      {open && (
+        <div className="gateway-guide-body">
+          {guides.map(({ key, emoji, name, steps, link, linkLabel }) => (
+            <div key={key} className="gateway-guide-platform">
+              <div className="gateway-guide-platform-header">
+                <span>{emoji} {name}</span>
+              </div>
+              <ol className="gateway-guide-steps">
+                {steps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+              {link && (
+                <a
+                  className="gateway-guide-link"
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  打开 {linkLabel} ↗
+                </a>
+              )}
+            </div>
+          ))}
+          <div className="gateway-guide-note">
+            💡 提示：所有平台都需要网关处于「运行中」状态才能正常工作。没有公网 IP 可以使用 ngrok、frp 等内网穿透工具。
+          </div>
+        </div>
+      )}
     </div>
   );
 }

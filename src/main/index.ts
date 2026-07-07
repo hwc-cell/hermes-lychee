@@ -2,7 +2,12 @@ import { app } from "electron";
 import { applyGpuPreferences, installGpuCrashGuard } from "./gpu-fallback";
 import { startMainProcess } from "./app/start";
 
-applyGpuPreferences();
+try {
+  applyGpuPreferences();
+} catch (e) {
+  console.warn("[GPU] applyGpuPreferences failed:", e);
+}
+
 installGpuCrashGuard();
 
 if (process.env.ENABLE_CDP === "1") {

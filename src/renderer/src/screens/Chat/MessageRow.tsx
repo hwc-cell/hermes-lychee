@@ -11,7 +11,7 @@ import { parseMediaTokens, cleanLeakedToolTags } from "./mediaUtils";
 import type { ChatBubbleMessage, ChatMessage } from "./types";
 
 export const APPROVAL_RE =
-  /⚠️.*dangerous|requires? (your )?approval|\/approve.*\/deny|do you want (me )?to (proceed|continue|run|execute)/i;
+  /⚠️.*(?:dangerous|危险|风险)|requires? (?:your )?(?:approval|批准|确认)|(?:需要|请求)(?:你[的的]?)?(?:批准|确认|允许)|(?:\/approve|\/deny|批准|拒绝)|(?:是否|要不要|要不要我)(?:继续|执行|运行)|do you want (?:me )?to (?:proceed|continue|run|execute)/i;
 
 /**
  * Coerce any DB, stream, or IPC timestamp value to valid epoch milliseconds.

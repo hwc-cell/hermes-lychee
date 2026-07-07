@@ -920,6 +920,7 @@ export function registerIpcHandlers(context: IpcContext): void {
       model: string,
       baseUrl: string,
       profile?: string,
+      contextLength?: number | null,
     ) => {
       const conn = getConnectionConfig();
       if (conn.mode === "remote") {
@@ -937,7 +938,7 @@ export function registerIpcHandlers(context: IpcContext): void {
               model,
               baseUrl,
               profile,
-              libEntry?.contextLength ?? null,
+              contextLength ?? libEntry?.contextLength ?? null,
               libEntry?.apiMode ?? null,
             );
             if (
@@ -993,7 +994,7 @@ export function registerIpcHandlers(context: IpcContext): void {
         model,
         baseUrl,
         profile,
-        libEntry?.contextLength ?? null,
+        contextLength ?? libEntry?.contextLength ?? null,
         libEntry?.apiMode ?? null,
       );
 

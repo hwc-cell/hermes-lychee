@@ -339,11 +339,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     function slashCategoryLabel(category: SlashCommand["category"]): string {
       switch (category) {
         case "chat":
-          return "Chat";
+          return "对话";
         case "info":
-          return "Pages & settings";
+          return "页面与设置";
         case "tools":
-          return "Tools & skills";
+          return "工具与技能";
         case "agent":
           return "Hermes Agent";
       }
@@ -454,6 +454,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       }
 
       if (e.key === "Enter" && !e.shiftKey) {
+        // Don't send while IME is composing (Chinese/Japanese/Korean input)
+        if (e.nativeEvent.isComposing) return;
         e.preventDefault();
         handleSend();
       }
@@ -593,16 +595,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               </div>
               <div className="slash-menu-footer">
                 <span>
-                  <kbd>↑↓</kbd> navigate
+                  <kbd>↑↓</kbd> 导航
                 </span>
                 <span>
-                  <kbd>↵</kbd> select
+                  <kbd>↵</kbd> 选择
                 </span>
                 <span>
-                  <kbd>tab</kbd> complete
+                  <kbd>tab</kbd> 补全
                 </span>
                 <span className="slash-menu-count">
-                  {filteredSlashCommands.length} commands
+                  {filteredSlashCommands.length} 个指令
                 </span>
               </div>
             </div>

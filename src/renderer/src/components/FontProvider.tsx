@@ -26,6 +26,14 @@ function isKnownFont(value: string | null): value is string {
   return !!value && FONT_OPTIONS.some((opt) => opt.value === value);
 }
 
+function resolveDefaultFont(): string {
+  // macOS: default to system font (SF Pro) for native look
+  if (typeof navigator !== "undefined" && navigator.platform?.includes("Mac")) {
+    return "system";
+  }
+  return DEFAULT_FONT;
+}
+
 export function FontProvider({
   children,
 }: {
@@ -33,7 +41,7 @@ export function FontProvider({
 }): React.JSX.Element {
   const [font, setFontState] = useState<string>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return isKnownFont(stored) ? stored : DEFAULT_FONT;
+    return isKnownFont(stored) ? stored : resolveDefaultFont();
   });
 
   function setFont(next: string): void {

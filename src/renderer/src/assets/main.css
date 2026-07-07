@@ -425,6 +425,58 @@
   --selection: rgba(38, 139, 210, 0.3);
 }
 
+/* ----- Lychee (荔枝红) ----- */
+[data-theme="lychee"] {
+  --bg-primary: #1a1216;
+  --bg-secondary: #150e11;
+  --bg-tertiary: #20171c;
+  --bg-elevated: #241a1f;
+  --bg-hover: #2d2127;
+  --bg-active: #37282e;
+  --accent: #e8536c;
+  --accent-hover: #f06c82;
+  --accent-subtle: rgba(232, 83, 108, 0.16);
+  --accent-text: #f0889a;
+  --text-primary: #e8d8dd;
+  --text-secondary: #b59ea7;
+  --text-muted: #7a636d;
+  --border-color: rgba(232, 83, 108, 0.12);
+  --border-subtle: rgba(232, 83, 108, 0.06);
+  --input-bg: rgba(232, 83, 108, 0.08);
+  --input-border: rgba(232, 83, 108, 0.15);
+  --input-focus: #e8536c;
+  --btn-primary-bg: #e8536c;
+  --btn-primary-hover: #f06c82;
+  --btn-primary-text: #fff5f5;
+  --btn-secondary-bg: rgba(232, 83, 108, 0.12);
+  --btn-secondary-hover: rgba(232, 83, 108, 0.2);
+  --btn-secondary-text: #f0889a;
+  --toggle-on: #e8536c;
+  --toggle-off: #37282e;
+  --card-bg: #20171c;
+  --card-border: rgba(232, 83, 108, 0.1);
+  --sidebar-bg: #150e11;
+  --sidebar-border: rgba(232, 83, 108, 0.08);
+  --sidebar-icon: #b59ea7;
+  --sidebar-icon-active: #f0889a;
+  --chip-bg: rgba(232, 83, 108, 0.1);
+  --chip-text: #f0889a;
+  --ok: #4ec592;
+  --ok-bg: rgba(78, 197, 146, 0.1);
+  --error: #e8536c;
+  --error-bg: rgba(232, 83, 108, 0.1);
+  --warning: #d4a853;
+  --warning-bg: rgba(212, 168, 83, 0.1);
+  --user-bubble: #e8536c;
+  --user-bubble-text: #fff5f5;
+  --agent-bubble: #20171c;
+  --agent-bubble-text: #e8d8dd;
+  --code-bg: #150e11;
+  --scrollbar-thumb: #37282e;
+  --scrollbar-hover: #4a3740;
+  --selection: rgba(232, 83, 108, 0.3);
+}
+
 /* ----- Manrope ----- */
 @font-face {
   font-family: "Manrope";
@@ -523,6 +575,43 @@ body {
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
+  /* macOS-native text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* macOS overlay scrollbars — thin, auto-hiding, native feel */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
+/* Lazy-loaded pane loading placeholder */
+.pane-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 /* ----- App Shell ----- */
@@ -1414,6 +1503,23 @@ body {
   /* Flush full-height panel: square right edge against the content, left
      corners kept rounded to follow the window's rounded corners. */
   border-radius: 16px 0 0 16px;
+}
+
+/* macOS: sidebar vibrancy with subtle blur */
+@media (prefers-color-scheme: dark) {
+  .sidebar {
+    background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .sidebar {
+    background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  }
 }
 
 .sidebar-collapsed .sidebar {
@@ -7038,6 +7144,121 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 12px;
+}
+
+/* Chinese domestic platform quick-connect section */
+.gateway-cn-section {
+  margin-bottom: 8px;
+}
+
+.gateway-cn-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 0;
+}
+
+.gateway-cn-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.gateway-cn-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* How-to-connect guide section */
+.gateway-guide-section {
+  margin-top: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gateway-guide-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.gateway-guide-toggle:hover {
+  background: var(--bg-tertiary);
+}
+
+.gateway-guide-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gateway-guide-body {
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.gateway-guide-platform {
+  margin-bottom: 16px;
+}
+
+.gateway-guide-platform:last-child {
+  margin-bottom: 12px;
+}
+
+.gateway-guide-platform-header {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.gateway-guide-steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.gateway-guide-steps li {
+  margin-bottom: 2px;
+}
+
+.gateway-guide-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.gateway-guide-link:hover {
+  text-decoration: underline;
+}
+
+.gateway-guide-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--accent-subtle);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 .gateway-platform-section {

@@ -1,7 +1,7 @@
 {
-  "name": "hermes-desktop",
+  "name": "hermes-lychee",
   "version": "0.7.3",
-  "description": "Hermes Agent Desktop — self-improving AI assistant",
+  "description": "Hermes Lychee — 基于 hermes-desktop 改进的 AI 智能助手桌面端",
   "main": "./out/main/index.js",
   "author": "fathah",
   "homepage": "https://github.com/fathah/hermes-desktop",

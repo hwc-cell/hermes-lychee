@@ -228,6 +228,77 @@ export const PROVIDERS = {
       baseUrl: "http://localhost:1234/v1",
       needsKey: false,
     },
+    // ---- 国内大模型 ----
+    {
+      id: "deepseek",
+      name: "constants.deepseekName",
+      desc: "constants.deepseekDesc",
+      tag: "constants.deepseekTag",
+      envKey: "DEEPSEEK_API_KEY",
+      url: "https://platform.deepseek.com/api_keys",
+      placeholder: "sk-...",
+      configProvider: "deepseek",
+      baseUrl: "https://api.deepseek.com/v1",
+      needsKey: true,
+      defaultModel: "deepseek-chat",
+      defaultContext: 1000000,
+    },
+    {
+      id: "qwen",
+      name: "constants.qwenName",
+      desc: "constants.qwenDesc",
+      tag: "constants.qwenTag",
+      envKey: "QWEN_API_KEY",
+      url: "https://dashscope.console.aliyun.com/apiKey",
+      placeholder: "sk-...",
+      configProvider: "custom",
+      baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      needsKey: true,
+      defaultModel: "qwen-plus",
+      defaultContext: 131072,
+    },
+    {
+      id: "zai",
+      name: "constants.glmName",
+      desc: "constants.glmDesc",
+      tag: "constants.glmTag",
+      envKey: "GLM_API_KEY",
+      url: "https://open.bigmodel.cn/usercenter/apikeys",
+      placeholder: "...",
+      configProvider: "zai",
+      baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+      needsKey: true,
+      defaultModel: "glm-4",
+      defaultContext: 131072,
+    },
+    {
+      id: "kimi",
+      name: "constants.kimiName",
+      desc: "constants.kimiDesc",
+      tag: "constants.kimiTag",
+      envKey: "KIMI_API_KEY",
+      url: "https://platform.moonshot.cn/console/api-keys",
+      placeholder: "sk-...",
+      configProvider: "custom",
+      baseUrl: "https://api.moonshot.cn/v1",
+      needsKey: true,
+      defaultModel: "moonshot-v1-8k",
+      defaultContext: 131072,
+    },
+    {
+      id: "minimax",
+      name: "constants.minimaxName",
+      desc: "constants.minimaxDesc",
+      tag: "constants.minimaxTag",
+      envKey: "MINIMAX_API_KEY",
+      url: "https://platform.minimax.chat/user-center/basic-information/interface-key",
+      placeholder: "...",
+      configProvider: "custom",
+      baseUrl: "https://api.minimax.chat/v1",
+      needsKey: true,
+      defaultModel: "abab6.5s-chat",
+      defaultContext: 131072,
+    },
   ],
 };
 
@@ -449,18 +520,19 @@ export interface ThemeDef {
  * entry here and define its CSS variables there — nothing else is required.
  */
 export const THEMES: ThemeDef[] = [
-  { id: "dark", name: "Dark", appearance: "dark" },
-  { id: "light", name: "Light", appearance: "light" },
-  { id: "dracula", name: "Dracula", appearance: "dark" },
-  { id: "nord", name: "Nord", appearance: "dark" },
+  { id: "dark", name: "暗夜模式", appearance: "dark" },
+  { id: "light", name: "浅色模式", appearance: "light" },
+  { id: "lychee", name: "荔枝红", appearance: "dark" },
+  { id: "dracula", name: "德古拉", appearance: "dark" },
+  { id: "nord", name: "极北", appearance: "dark" },
   { id: "one-dark", name: "One Dark", appearance: "dark" },
-  { id: "github-dark", name: "GitHub Dark", appearance: "dark" },
+  { id: "github-dark", name: "GitHub 暗色", appearance: "dark" },
   { id: "monokai", name: "Monokai", appearance: "dark" },
-  { id: "solarized-dark", name: "Solarized Dark", appearance: "dark" },
-  { id: "gruvbox-dark", name: "Gruvbox Dark", appearance: "dark" },
-  { id: "tokyo-night", name: "Tokyo Night", appearance: "dark" },
-  { id: "github-light", name: "GitHub Light", appearance: "light" },
-  { id: "solarized-light", name: "Solarized Light", appearance: "light" },
+  { id: "solarized-dark", name: "Solarized 暗色", appearance: "dark" },
+  { id: "gruvbox-dark", name: "Gruvbox 暗色", appearance: "dark" },
+  { id: "tokyo-night", name: "东京夜", appearance: "dark" },
+  { id: "github-light", name: "GitHub 浅色", appearance: "light" },
+  { id: "solarized-light", name: "Solarized 浅色", appearance: "light" },
 ];
 
 /**
@@ -474,7 +546,7 @@ export const THEME_OPTIONS = [
 ];
 
 /** Themes used by the "System" setting when following the OS preference. */
-export const DEFAULT_DARK_THEME = "dark";
+export const DEFAULT_DARK_THEME = "lychee";
 export const DEFAULT_LIGHT_THEME = "light";
 
 export const THEME_STORAGE_KEY = "hermes-theme";
@@ -696,6 +768,25 @@ export const SETTINGS_SECTIONS: SectionDef[] = [
         label: "constants.tavilyApiKey",
         type: "password",
         hint: "constants.tavilyHint",
+      },
+      // 联网搜索服务商
+      {
+        key: "BRAVE_API_KEY",
+        label: "constants.braveApiKey",
+        type: "password",
+        hint: "constants.braveHint",
+      },
+      {
+        key: "SERPER_API_KEY",
+        label: "constants.serperApiKey",
+        type: "password",
+        hint: "constants.serperHint",
+      },
+      {
+        key: "BING_API_KEY",
+        label: "constants.bingApiKey",
+        type: "password",
+        hint: "constants.bingHint",
       },
       {
         key: "FIRECRAWL_API_KEY",

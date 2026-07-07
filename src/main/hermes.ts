@@ -230,8 +230,9 @@ async function getApiCapabilities(
       },
       (res) => {
         let raw = "";
-        res.on("data", (chunk) => {
-          raw += chunk.toString();
+        res.setEncoding("utf-8");
+        res.on("data", (chunk: string) => {
+          raw += chunk;
         });
         res.on("end", () => {
           if (res.statusCode !== 200) {
@@ -341,11 +342,13 @@ function transcribeAudioViaLocalPython(
       }
     };
 
-    proc.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf-8");
+    proc.stdout?.setEncoding("utf-8");
+    proc.stdout?.on("data", (chunk: string) => {
+      stdout += chunk;
     });
-    proc.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf-8");
+    proc.stderr?.setEncoding("utf-8");
+    proc.stderr?.on("data", (chunk: string) => {
+      stderr += chunk;
     });
     proc.on("error", (error) => {
       cleanup();
@@ -682,12 +685,14 @@ class TuiGatewayClient {
       });
     });
 
-    proc.stdout?.on("data", (chunk: Buffer) => {
-      const line = stripAnsi(chunk.toString()).trim();
+    proc.stdout?.setEncoding("utf-8");
+    proc.stdout?.on("data", (chunk: string) => {
+      const line = stripAnsi(chunk).trim();
       if (line) console.log(`[dashboard-gateway:${this.key}] ${line}`);
     });
-    proc.stderr?.on("data", (chunk: Buffer) => {
-      const line = stripAnsi(chunk.toString()).trim();
+    proc.stderr?.setEncoding("utf-8");
+    proc.stderr?.on("data", (chunk: string) => {
+      const line = stripAnsi(chunk).trim();
       if (line) console.warn(`[dashboard-gateway:${this.key}] ${line}`);
     });
 
@@ -1520,8 +1525,11 @@ function sendMessageViaApi(
         return processSseData(dataLine);
       }
 
-      res.on("data", (chunk: Buffer) => {
-        buffer += chunk.toString();
+      // setEncoding ensures multi-byte CJK characters are never split
+      // across chunk boundaries (issue #793).
+      res.setEncoding("utf-8");
+      res.on("data", (chunk: string) => {
+        buffer += chunk;
         const parts = buffer.split("\n\n");
         buffer = parts.pop() || "";
 
@@ -1774,8 +1782,9 @@ function sendMessageViaRuns(
           return;
         }
         let buffer = "";
-        res.on("data", (chunk: Buffer) => {
-          buffer += chunk.toString();
+        res.setEncoding("utf-8");
+        res.on("data", (chunk: string) => {
+          buffer += chunk;
           const parts = buffer.split("\n\n");
           buffer = parts.pop() || "";
           for (const part of parts) {
@@ -1840,8 +1849,9 @@ function sendMessageViaRuns(
     },
     (res) => {
       let raw = "";
-      res.on("data", (chunk) => {
-        raw += chunk.toString();
+      res.setEncoding("utf-8");
+      res.on("data", (chunk: string) => {
+        raw += chunk;
       });
       res.on("end", () => {
         if (res.statusCode !== 202 && res.statusCode !== 200) {
@@ -2382,6 +2392,9 @@ function sendMessageViaCli(
     "EXA_API_KEY",
     "PARALLEL_API_KEY",
     "TAVILY_API_KEY",
+    "BRAVE_API_KEY",
+    "SERPER_API_KEY",
+    "BING_API_KEY",
     "FIRECRAWL_API_KEY",
     "FAL_KEY",
     "HONCHO_API_KEY",

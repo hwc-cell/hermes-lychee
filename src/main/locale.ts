@@ -1,6 +1,7 @@
 import {
   APP_LOCALES,
   DEFAULT_ACTIVE_LOCALE,
+  FALLBACK_LOCALE,
   getLocale as getSharedLocale,
   setLocale as setSharedLocale,
   type AppLocale,
@@ -25,12 +26,28 @@ function writeSavedLocale(locale: AppLocale): void {
 }
 
 const savedLocale = readSavedLocale();
+
+// Always apply a locale: use saved preference first, then the system locale
+// if it's a supported one, otherwise fall back to zh-CN (the new default).
 if (savedLocale) {
   setSharedLocale(savedLocale);
+} else {
+  // Try to detect system locale for first launch
+  const systemLang = (() => {
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      if (locale === "zh-CN" || locale.startsWith("zh-Hans")) return "zh-CN";
+      if (locale === "zh-TW" || locale.startsWith("zh-Hant")) return "zh-TW";
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+  setSharedLocale(systemLang ?? DEFAULT_ACTIVE_LOCALE);
 }
 
 export function getAppLocale(): AppLocale {
-  return readSavedLocale() || getSharedLocale() || DEFAULT_ACTIVE_LOCALE;
+  return getSharedLocale() || readSavedLocale() || DEFAULT_ACTIVE_LOCALE;
 }
 
 export function setAppLocale(locale: AppLocale): AppLocale {

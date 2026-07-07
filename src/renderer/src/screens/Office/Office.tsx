@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Crown, Move, RefreshCw, TriangleAlert, Users, X } from "lucide-react";
+import { Crown, MonitorOff, Move, RefreshCw, Users, X } from "lucide-react";
 import type { GpuStatus } from "../../../../shared/gpu";
 import { useI18n } from "../../components/useI18n";
 import oneChatIcon from "../../assets/images/one-chat.svg";
@@ -41,12 +41,8 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
   // updated to match.
   const [devMode, setDevMode] = useState(false);
   const [devLog, setDevLog] = useState<string | null>(null);
-  // Software-rendering warning: the 3D office is the one surface that makes a
-  // SwiftShader fallback painfully visible (1 fps, CPU pegged), so this is
-  // where the user learns hardware acceleration is off and can recover.
+  // GPU state
   const [gpuStatus, setGpuStatus] = useState<GpuStatus | null>(null);
-  const [gpuNoticeDismissed, setGpuNoticeDismissed] = useState(false);
-  const [reenabling, setReenabling] = useState(false);
 
   const setCeo = useCallback((id: string | null) => {
     setCeoId(id);
@@ -284,85 +280,56 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
       </header>
 
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
-        <Office3D
-          agents={positionedAgents}
-          selectedId={selectedId}
-          onSelectAgent={setSelectedId}
-          devMode={devMode}
-          onDevLog={setDevLog}
-        />
-
-        {gpuStatus?.disabled && !gpuNoticeDismissed && (
+        {/* GPU status check is async — show placeholder until we know.
+            If GPU is enabled, render Office3D. If disabled, show static page. */}
+        {gpuStatus === null ? (
           <div
             style={{
-              position: "absolute",
-              top: 16,
-              left: "50%",
-              transform: "translateX(-50%)",
-              maxWidth: 560,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 14px",
-              borderRadius: 10,
-              background: "rgba(20,24,33,0.92)",
-              border: "1px solid rgba(245,158,11,0.5)",
-              color: "#fbbf24",
-              fontSize: 13,
-              lineHeight: 1.4,
-              zIndex: 10,
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "var(--bg-primary)", opacity: 0.5, fontSize: 14,
             }}
           >
-            <TriangleAlert size={18} style={{ flex: "0 0 auto" }} />
-            <span>
-              {gpuStatus.reason === "env"
-                ? t("office.softwareRenderingEnvNotice")
-                : gpuStatus.reason === "preference"
-                  ? t("office.softwareRenderingPrefNotice")
-                  : t("office.softwareRenderingNotice")}
-            </span>
-            {gpuStatus.canReenable && (
-              <button
-                type="button"
-                onClick={() => void handleReenableGpu()}
-                disabled={reenabling}
-                style={{
-                  flex: "0 0 auto",
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(245,158,11,0.6)",
-                  background: "rgba(245,158,11,0.16)",
-                  color: "#fbbf24",
-                  cursor: reenabling ? "default" : "pointer",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {t("office.reenableGpu")}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setGpuNoticeDismissed(true)}
-              title={t("office.dismissNotice")}
-              style={{
-                flex: "0 0 auto",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 4,
-                borderRadius: 6,
-                border: "none",
-                background: "transparent",
-                color: "rgba(251,191,36,0.8)",
-                cursor: "pointer",
-              }}
-            >
-              <X size={15} />
-            </button>
+            加载中…
           </div>
+        ) : gpuStatus.disabled ? (
+          <div
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: 12, padding: 20,
+              background: "var(--bg-primary)",
+            }}
+          >
+            <MonitorOff size={48} style={{ opacity: 0.3 }} />
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>3D 工作区不可用</h3>
+            <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center", maxWidth: 360, lineHeight: 1.6 }}>
+              GPU 硬件加速已关闭。Agent 仍可正常使用。
+              前往「设置 → 外观 → 硬件加速」开启后重启。
+            </p>
+          </div>
+        ) : agents.length === 0 && !loading ? (
+          <div
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              pointerEvents: "none", opacity: 0.6, fontSize: 14,
+            }}
+          >
+            {t("office.noAgents")}
+          </div>
+        ) : (
+          <Office3D
+            agents={positionedAgents}
+            selectedId={selectedId}
+            onSelectAgent={setSelectedId}
+            devMode={devMode}
+            onDevLog={setDevLog}
+          />
         )}
+
+        {/* The old gpu notice banner is redundant now — show static page above */}
 
         {import.meta.env.DEV && devMode && (
           <div
@@ -563,22 +530,47 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
           </aside>
         )}
 
-        {!loading && agents.length === 0 && (
+        {import.meta.env.DEV && devMode && (
           <div
             style={{
               position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              pointerEvents: "none",
-              opacity: 0.6,
-              fontSize: 14,
+              left: 20,
+              bottom: 20,
+              maxWidth: 520,
+              padding: "10px 14px",
+              borderRadius: 10,
+              background: "rgba(20,24,33,0.92)",
+              color: "#fbbf24",
+              border: "1px solid rgba(245,158,11,0.5)",
+              fontSize: 12,
+              fontFamily: "monospace",
+              lineHeight: 1.5,
+              zIndex: 10,
+              userSelect: "text",
             }}
           >
-            {t("office.noAgents")}
+            {devLog ??
+              "Click a building to pick it up, then click empty ground to move it. Coordinates also log to DevTools console."}
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => setChatOpen(true)}
+          className="absolute bottom-5 right-5 w-30 h-11 rounded-lg border-none bg-black cursor-pointer flex items-center justify-center px-3 gap-2 z-10"
+        >
+          <img
+            src={oneChatIcon}
+            alt="Chat"
+            className="h-6 brightness-0 invert"
+          />
+        </button>
+
+        <OneChatModal
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          agents={positionedAgents}
+        />
       </div>
     </div>
   );

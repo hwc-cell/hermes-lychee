@@ -2,9 +2,9 @@ import type { ModelCommandFormatter, SlashCommandDefinition } from "./types";
 
 const formatExplainSelection: ModelCommandFormatter = async (input) => ({
   content: [
-    "Explain the following content clearly.",
-    input.args && `Additional instructions:\n${input.args}`,
-    input.selectedText && `Content:\n${input.selectedText}`,
+    "请清晰解释以下内容。",
+    input.args && `额外说明：\n${input.args}`,
+    input.selectedText && `内容：\n${input.selectedText}`,
   ]
     .filter(Boolean)
     .join("\n\n"),
@@ -15,8 +15,8 @@ const formatExplainSelection: ModelCommandFormatter = async (input) => ({
 export const DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] = [
   {
     name: "settings",
-    description: "Open Desktop settings",
-    category: "Desktop",
+    description: "打开桌面端设置",
+    category: "桌面端",
     source: "desktop",
     target: "desktop",
     allowWhileBusy: true,
@@ -28,8 +28,8 @@ export const DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] = [
   },
   {
     name: "explain-selection",
-    description: "Explain the selected content",
-    category: "Desktop",
+    description: "解释选中的内容",
+    category: "桌面端",
     source: "desktop",
     target: "model",
     allowWhileBusy: false,
@@ -39,8 +39,8 @@ export const DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] = [
   {
     name: "help",
     aliases: ["commands"],
-    description: "Show available commands",
-    category: "Desktop",
+    description: "查看可用指令",
+    category: "桌面端",
     source: "desktop",
     target: "desktop",
     allowWhileBusy: true,
@@ -51,8 +51,8 @@ export const DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] = [
   },
   {
     name: "model",
-    description: "Open model picker",
-    category: "Desktop",
+    description: "打开模型选择器",
+    category: "桌面端",
     source: "desktop",
     target: "desktop",
     allowWhileBusy: true,
@@ -64,19 +64,19 @@ export const DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] = [
   },
   ...(
     [
-      ["agents", "Open Agents page"],
-      ["office", "Open Office 3D page"],
-      ["discover", "Open Discover page"],
-      ["providers", "Open Providers page"],
-      ["schedules", "Open Schedules page"],
-      ["kanban", "Open Kanban board"],
-      ["gateway", "Open Gateway status page"],
+      ["agents", "打开 Agent 配置页面"],
+      ["office", "打开 3D 工作区页面"],
+      ["discover", "打开发现页面"],
+      ["providers", "打开服务商页面"],
+      ["schedules", "打开定时任务页面"],
+      ["kanban", "打开看板"],
+      ["gateway", "打开网关状态页面"],
     ] as const
   ).map(
     ([name, description]): SlashCommandDefinition => ({
       name,
       description,
-      category: "Navigation",
+      category: "导航",
       source: "desktop",
       target: "desktop",
       allowWhileBusy: true,
@@ -97,22 +97,22 @@ export const DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] = [
 const LOCAL_COMMANDS: ReadonlyArray<
   readonly [name: string, description: string, uiAction?: boolean]
 > = [
-  ["new", "Start a new chat", true],
-  ["clear", "Clear conversation history", true],
-  ["persona", "Show the current persona"],
-  ["memory", "Show agent memory"],
-  ["tools", "Show available toolsets"],
-  ["skills", "Show installed skills"],
-  ["version", "Show Hermes version"],
-  ["fast", "Toggle fast mode", true],
-  ["usage", "Show token usage"],
+  ["new", "开始新对话", true],
+  ["clear", "清空对话历史", true],
+  ["persona", "查看当前人格"],
+  ["memory", "查看 Agent 记忆"],
+  ["tools", "查看可用工具集"],
+  ["skills", "查看已安装技能"],
+  ["version", "查看 Hermes 版本"],
+  ["fast", "切换快速模式", true],
+  ["usage", "查看 Token 用量"],
 ];
 
 export const LOCAL_DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] =
   LOCAL_COMMANDS.map(([name, description, uiAction]) => ({
     name,
     description,
-    category: "Desktop",
+    category: "桌面端",
     source: "desktop",
     target: "desktop",
     allowWhileBusy: true,
@@ -123,7 +123,7 @@ export const LOCAL_DESKTOP_SLASH_COMMANDS: SlashCommandDefinition[] =
         ? { type: "handled" as const }
         : {
             type: "error" as const,
-            message: `Desktop command /${input.name} is unavailable`,
+            message: `桌面端指令 /${input.name} 暂不可用`,
           };
     },
   }));

@@ -6,6 +6,7 @@ import {
   Languages,
   Palette,
   Plug,
+  Puzzle,
   ShieldCheck,
   Users,
   X,
@@ -22,6 +23,7 @@ import DataPane from "./DataPane";
 import AboutPane from "./AboutPane";
 import CommunityPane from "./CommunityPane";
 import LogsPane from "./LogsPane";
+import PluginsPane from "./PluginsPane";
 
 export type SettingsSection =
   | "appearance"
@@ -31,7 +33,8 @@ export type SettingsSection =
   | "data"
   | "about"
   | "community"
-  | "logs";
+  | "logs"
+  | "plugins";
 
 type NavGroup = "general" | "hermes";
 
@@ -84,6 +87,12 @@ const SETTINGS_NAV: ReadonlyArray<{
     id: "logs",
     labelKey: "settings.nav.logs",
     Icon: FileText,
+  },
+  {
+    group: "hermes",
+    id: "plugins",
+    labelKey: "settings.nav.plugins",
+    Icon: Puzzle,
   },
 ];
 
@@ -196,6 +205,7 @@ export default function SettingsModal({
             {section === "about" && <AboutPane />}
             {section === "community" && <CommunityPane />}
             {section === "logs" && <LogsPane />}
+            {section === "plugins" && <PluginsPane />}
           </SettingsDataContext.Provider>
         </div>
       </div>

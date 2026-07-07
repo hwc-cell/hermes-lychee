@@ -206,6 +206,15 @@ export function applyGpuPreferences(): void {
   // behind --enable-unsafe-swiftshader, so opt in explicitly; without it WebGL
   // context creation fails ("Could not create a WebGL context ... Disabled").
   app.commandLine.appendSwitch("enable-unsafe-swiftshader");
+  // macOS M-series: some GPU blocklist entries crash the process.
+  // Force-enable GPU features that would otherwise fall through to a crash.
+  if (process.platform === "darwin") {
+    app.commandLine.appendSwitch("ignore-gpu-blocklist");
+    app.commandLine.appendSwitch("disable-gpu-sandbox");
+    app.commandLine.appendSwitch("enable-webgl");
+    app.commandLine.appendSwitch("disable-gpu-watchdog");
+    app.commandLine.appendSwitch("enable-features", "Vulkan,UseSkiaRenderer");
+  }
 }
 
 /** Persist the disable-gpu flag. Returns false if the write failed so the

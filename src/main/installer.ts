@@ -940,6 +940,10 @@ export async function runInstall(
           PATH: askpass ? `${askpass.pathPrepend}:${basePath}` : basePath,
           HOME: home,
           TERM: "dumb",
+          // Use Chinese mirrors for faster downloads (uv/pip)
+          UV_DEFAULT_INDEX: process.env.UV_DEFAULT_INDEX || "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
+          UV_INDEX_URL: process.env.UV_INDEX_URL || "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
+          PIP_INDEX_URL: process.env.PIP_INDEX_URL || "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
           ...(askpass?.env ?? {}),
         },
         stdio: ["ignore", "pipe", "pipe"],
@@ -1098,6 +1102,10 @@ async function runInstallWindows(emit: (t: string) => void): Promise<void> {
           // Hint that we're not interactive so install.ps1 doesn't `pause`
           // (the .cmd wrapper does on failure, but -File on .ps1 won't).
           NO_COLOR: "1",
+          // Use Chinese mirrors for faster downloads (uv/pip)
+          UV_DEFAULT_INDEX: process.env.UV_DEFAULT_INDEX || "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
+          UV_INDEX_URL: process.env.UV_INDEX_URL || "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
+          PIP_INDEX_URL: process.env.PIP_INDEX_URL || "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
         },
         stdio: ["ignore", "pipe", "pipe"],
         ...HIDDEN_SUBPROCESS_OPTIONS,

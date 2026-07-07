@@ -20,6 +20,7 @@ export default {
     about: "About & Updates",
     community: "Community",
     logs: "Logs & Diagnostics",
+    plugins: "Components",
   },
   agentSubtitle: "The local AI engine",
   desktopTitle: "Hermes One Desktop",

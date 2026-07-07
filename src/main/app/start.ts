@@ -1,8 +1,11 @@
 import {
   app,
   BrowserWindow,
+  Menu,
+  nativeImage,
   session,
   shell,
+  Tray,
 } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
@@ -24,14 +27,14 @@ import { registerIpcHandlers } from "../ipc/register";
 import { setGatewayPromptParent } from "../gatewayPrompt";
 import { showChatContextMenu } from "./context-menu";
 import { buildMenu } from "./menu";
-import { setupUpdater } from "./updater";
 
-const APP_NAME = process.env.HERMES_DESKTOP_APP_NAME?.trim() || "Hermes One";
+const APP_NAME = process.env.HERMES_DESKTOP_APP_NAME?.trim() || "Hermes Lychee";
 const OPEN_DEVTOOLS_ON_START =
   process.env.HERMES_OPEN_DEVTOOLS === "1" ||
   process.env.HERMES_DESKTOP_OPEN_DEVTOOLS === "1";
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 const activeRuns = new Map<string, () => void>();
 
 export function startMainProcess(): void {
@@ -51,10 +54,11 @@ export function startMainProcess(): void {
     openExternalUrl,
   });
 
-  setupUpdater({ getMainWindow: () => mainWindow });
+  // Auto-update disabled — this is a custom fork (Hermes Lychee)
+  // setupUpdater({ getMainWindow: () => mainWindow });
 
   app.whenReady().then(() => {
-    electronApp.setAppUserModelId("com.hermes.desktop");
+    electronApp.setAppUserModelId("com.nousresearch.hermes");
 
     app.on("browser-window-created", (_, window) => {
       optimizer.watchWindowShortcuts(window);
@@ -97,8 +101,51 @@ export function startMainProcess(): void {
     createWindow();
     buildMenu({ getMainWindow: () => mainWindow, openExternalUrl });
 
+    // macOS: create a tray icon so closing the window minimizes to tray
+    // instead of quitting (issue #683).
+    if (process.platform === "darwin") {
+      const trayIcon = nativeImage
+        .createFromPath(icon)
+        .resize({ width: 16, height: 16 });
+      trayIcon.setTemplateImage(true);
+      tray = new Tray(trayIcon);
+      tray.setToolTip(APP_NAME);
+      tray.on("click", () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      });
+      const contextMenu = Menu.buildFromTemplate([
+        {
+          label: `显示 ${APP_NAME}`,
+          click: () => {
+            if (mainWindow) {
+              mainWindow.show();
+              mainWindow.focus();
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "退出",
+          click: () => {
+            tray?.destroy();
+            tray = null;
+            app.quit();
+          },
+        },
+      ]);
+      tray.setContextMenu(contextMenu);
+    }
+
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      } else if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
     });
   });
 
@@ -112,11 +159,12 @@ export function startMainProcess(): void {
     activeRuns.clear();
     cleanupTempMediaFiles();
     stopAllDashboards();
-    // Kill the SSH tunnel process on quit — otherwise the `ssh -N -L` child is
-    // orphaned (reparented to PID 1) and keeps holding its local port, so each
-    // relaunch leaks another tunnel and the port drifts (18642 → 61799 → …).
     stopSshTunnel();
     closeDbConnection();
+    if (tray) {
+      tray.destroy();
+      tray = null;
+    }
   });
 }
 
@@ -144,8 +192,8 @@ function openExternalUrl(rawUrl: unknown): void {
 function createWindow(): void {
   const rendererHtmlPath = join(__dirname, "../renderer/index.html");
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 850,
+    width: 1200,
+    height: 900,
     minWidth: 900,
     title: APP_NAME,
     minHeight: 600,
@@ -153,7 +201,11 @@ function createWindow(): void {
     autoHideMenuBar: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : undefined,
     ...(process.platform === "darwin"
-      ? { trafficLightPosition: { x: 16, y: 16 } }
+      ? {
+          trafficLightPosition: { x: 16, y: 16 },
+          vibrancy: "under-window",
+          visualEffectState: "active",
+        }
       : {}),
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
@@ -168,6 +220,15 @@ function createWindow(): void {
   });
 
   mainWindow.on("ready-to-show", () => mainWindow?.show());
+
+  // macOS: close → hide to tray instead of quitting (issue #683)
+  if (process.platform === "darwin") {
+    mainWindow.on("close", (e) => {
+      if (!tray) return; // tray destroyed → actually quitting
+      e.preventDefault();
+      mainWindow?.hide();
+    });
+  }
   mainWindow.webContents.once("did-finish-load", () => {
     if (OPEN_DEVTOOLS_ON_START) {
       mainWindow?.webContents.openDevTools({ mode: "detach" });

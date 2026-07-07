@@ -12,6 +12,127 @@ import {
 } from "../liveToolEvents";
 import { upsertLiveReasoningChunk } from "../liveReasoningEvents";
 
+/**
+ * Strip trailing whitespace-only lines from an array of lines.
+ */
+function trimTrailingEmpty(lines: string[]): string[] {
+  while (lines.length > 0 && !lines[lines.length - 1].trim()) {
+    lines.pop();
+  }
+  return lines;
+}
+
+/**
+ * When streaming ends, the `message.complete` event may re-deliver a suffix
+ * that overlaps with the already-streamed text, resulting in "明天见\n\n明天见"
+ * style duplicates. Detects and removes the duplicate trailing line(s).
+ */
+function deduplicateMergedContent(
+  currentLines: string[],
+  incoming: string,
+): string | null {
+  const trimmed = trimTrailingEmpty([...currentLines]);
+  if (trimmed.length === 0) return null;
+
+  const incomingClean = incoming.replace(/^\n+/, "");
+  if (!incomingClean) return null;
+
+  const lastLine = trimmed[trimmed.length - 1].trim();
+  const incomingLines = incomingClean.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (incomingLines.length === 0) return null;
+
+  // If the new content is entirely contained at the end of existing content,
+  // strip it.
+  const existingTail = trimmed.slice(-incomingLines.length).map((l) => l.trim());
+  if (existingTail.join("") === incomingLines.join("")) return currentLines.join("\n");
+
+  // If just the last line repeats, remove the incoming duplicate
+  if (incomingLines.length === 1 && incomingLines[0] === lastLine) {
+    return currentLines.join("\n");
+  }
+
+  return null; // no dedup needed
+}
+
+/**
+ * Batches streaming text chunks into React state updates at ~60fps.
+ * Instead of calling setMessages on every tiny SSE delta, chunks are
+ * accumulated and flushed once per animation frame. This dramatically
+ * reduces re-renders on long responses (issue #768).
+ */
+class ChunkBatcher {
+  private pending: string[] = [];
+  private rafId: ReturnType<typeof requestAnimationFrame> | null = null;
+  private setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  private activeTurnRef: React.MutableRefObject<ActiveTurn | null>;
+
+  constructor(
+    setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+    activeTurnRef: React.MutableRefObject<ActiveTurn | null>,
+  ) {
+    this.setMessages = setMessages;
+    this.activeTurnRef = activeTurnRef;
+  }
+
+  push(chunk: string): void {
+    this.pending.push(chunk);
+    if (this.rafId === null) {
+      this.rafId = requestAnimationFrame(() => this.flush());
+    }
+  }
+
+  private flush(): void {
+    this.rafId = null;
+    const combined = this.pending.join("");
+    this.pending = [];
+    if (!combined || !this.activeTurnRef.current) return;
+    this.setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (
+        last &&
+        last.role === "agent" &&
+        isBubbleMessage(last) &&
+        !last.error
+      ) {
+        // Deduplicate trailing repeated line from streaming completion
+        const currentLines = last.content.split("\n");
+        const merged = last.content + combined;
+        const deduped = deduplicateMergedContent(currentLines, combined);
+        return [
+          ...prev.slice(0, -1),
+          {
+            ...last,
+            content: deduped || merged,
+            pending: true,
+            turnId: last.turnId || this.activeTurnRef.current?.turnId,
+          },
+        ];
+      }
+      return [
+        ...prev,
+        {
+          id: `agent-${Date.now()}`,
+          role: "agent",
+          content: combined,
+          pending: true,
+          ...(this.activeTurnRef.current?.turnId
+            ? { turnId: this.activeTurnRef.current.turnId }
+            : {}),
+        },
+      ];
+    });
+  }
+
+  /** Flush immediately (e.g. on done/error to ensure last chunk is rendered). */
+  flushImmediate(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    this.flush();
+  }
+}
+
 interface UseChatIPCArgs {
   /** This conversation's run id. Events tagged with a different runId belong
    *  to another mounted/background chat and are ignored. */
@@ -56,6 +177,17 @@ export function useChatIPC({
   const dbPollRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
   const dbPollInFlightRef = useRef(false);
   const acceptedSessionIdRef = useRef<string | null>(sessionScopeId);
+  const batcherRef = useRef<ChunkBatcher | null>(null);
+
+  // Create a new batcher whenever the state setter or activeTurnRef changes.
+  // They are stable across renders, so this is effectively created once.
+  useEffect(() => {
+    batcherRef.current = new ChunkBatcher(setMessages, activeTurnRef);
+    return () => {
+      batcherRef.current?.flushImmediate();
+      batcherRef.current = null;
+    };
+  }, [setMessages, activeTurnRef]);
 
   const stopDbPolling = useCallback((): void => {
     if (dbPollRef.current !== null) {
@@ -128,39 +260,7 @@ export function useChatIPC({
 
     const cleanupChunk = window.hermesAPI.onChatChunk((eventRunId, chunk) => {
       if (!eventMatchesRun(eventRunId, runId)) return;
-      if (!activeTurnRef.current) return;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (
-          last &&
-          last.role === "agent" &&
-          isBubbleMessage(last) &&
-          !last.error
-        ) {
-          return [
-            ...prev.slice(0, -1),
-            {
-              ...last,
-              content: last.content + chunk,
-              pending: true,
-              turnId: last.turnId || activeTurnRef.current?.turnId,
-            },
-          ];
-        }
-        if (!chunk || !chunk.trim()) return prev;
-        return [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            role: "agent",
-            content: chunk,
-            pending: true,
-            ...(activeTurnRef.current?.turnId
-              ? { turnId: activeTurnRef.current.turnId }
-              : {}),
-          },
-        ];
-      });
+      batcherRef.current?.push(chunk);
     });
 
     const cleanupReasoning = window.hermesAPI.onChatReasoningChunk(
@@ -179,6 +279,7 @@ export function useChatIPC({
     const cleanupDone = window.hermesAPI.onChatDone(
       async (eventRunId, sessionId) => {
         if (!eventMatchesRun(eventRunId, runId)) return;
+        batcherRef.current?.flushImmediate();
         reasoningSegmentClosedRef.current = false;
         stopDbPolling();
         const activeTurn = activeTurnRef.current;
@@ -224,6 +325,7 @@ export function useChatIPC({
 
     const cleanupError = window.hermesAPI.onChatError((eventRunId, error) => {
       if (!eventMatchesRun(eventRunId, runId)) return;
+      batcherRef.current?.flushImmediate();
       reasoningSegmentClosedRef.current = false;
       stopDbPolling();
       const activeTurn = activeTurnRef.current;

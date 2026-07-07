@@ -80,10 +80,10 @@ export const ContextFolderChip = memo(function ContextFolderChip({
 
   const renderDropdown = (): React.JSX.Element => (
     <div className="chat-ctxfolder-dropdown">
-      <div className="chat-ctxfolder-dropdown-header">Recent</div>
+      <div className="chat-ctxfolder-dropdown-header">最近使用</div>
       <div className="chat-ctxfolder-dropdown-list">
         {recentFolders.length === 0 ? (
-          <div className="chat-ctxfolder-dropdown-empty">No recent folders</div>
+          <div className="chat-ctxfolder-dropdown-empty">暂无最近目录</div>
         ) : (
           recentFolders.map((path) => {
             const isSelected = path === contextFolder;
@@ -118,7 +118,7 @@ export const ContextFolderChip = memo(function ContextFolderChip({
           onPickFolder();
         }}
       >
-        <span>Open folder...</span>
+        <span>打开文件夹…</span>
       </button>
     </div>
   );

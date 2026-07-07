@@ -1,5 +1,5 @@
 appId: com.nousresearch.hermes
-productName: Hermes One
+productName: Hermes Lychee
 directories:
   buildResources: build
 files:
@@ -52,9 +52,10 @@ linux:
   category: Utility
   synopsis: Self-improving AI assistant desktop app
   description: >-
-    Hermes One is a native desktop app for installing, configuring, and chatting
+    Hermes Lychee is a native desktop app for installing, configuring, and chatting
     with Hermes Agent — a self-improving AI assistant with tool use, multi-platform
     messaging, and a closed learning loop.
+    Built on top of fathah/hermes-desktop.
 appImage:
   artifactName: ${name}-${version}.${ext}
 deb:

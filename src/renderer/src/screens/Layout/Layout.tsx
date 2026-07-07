@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import Chat from "../Chat/Chat";
 import {
   dbItemsToChatMessages,
@@ -24,7 +24,7 @@ import Skills from "../Skills/Skills";
 import Memory from "../Memory/Memory";
 import Tools from "../Tools/Tools";
 import Gateway from "../Gateway/Gateway";
-import Office from "../Office/Office";
+const Office = lazy(() => import("../Office/Office"));
 import Providers from "../Providers/Providers";
 import Schedules from "../Schedules/Schedules";
 import Kanban from "../Kanban/Kanban";
@@ -455,6 +455,45 @@ function Layout({
     };
   }, [handleNewChat]);
 
+  // Close a conversation tab: stop it if it's running, drop it from the list,
+  // and (if it was active) move to a neighbour. Always keep at least one chat
+  // open so the chat view is never empty.
+  const handleCloseRun = useCallback(
+    (runId: string) => {
+      window.hermesAPI.abortChat(runId);
+      const idx = runs.findIndex((r) => r.runId === runId);
+      const remaining = runs.filter((r) => r.runId !== runId);
+      if (remaining.length === 0) {
+        const fresh = mintRun(activeProfile);
+        setRuns([fresh]);
+        setActiveRunId(fresh.runId);
+        return;
+      }
+      setRuns(remaining);
+      if (runId === activeRunId) {
+        const neighbour = remaining[Math.min(idx, remaining.length - 1)];
+        setActiveRunId(neighbour.runId);
+        setActiveProfile(neighbour.profile);
+      }
+    },
+    [runs, activeRunId, activeProfile],
+  );
+
+  // Cmd+W to close the active tab (macOS convention)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        // Don't intercept when an input/textarea is focused
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        handleCloseRun(activeRunId);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeRunId, handleCloseRun]);
+
   // Esc closes the full-list sessions modal.
   useEffect(() => {
     if (!sessionsModalOpen) return;
@@ -515,30 +554,6 @@ function Layout({
     [runs, goTo],
   );
 
-  // Close a conversation tab: stop it if it's running, drop it from the list,
-  // and (if it was active) move to a neighbour. Always keep at least one chat
-  // open so the chat view is never empty.
-  const handleCloseRun = useCallback(
-    (runId: string) => {
-      window.hermesAPI.abortChat(runId);
-      const idx = runs.findIndex((r) => r.runId === runId);
-      const remaining = runs.filter((r) => r.runId !== runId);
-      if (remaining.length === 0) {
-        const fresh = mintRun(activeProfile);
-        setRuns([fresh]);
-        setActiveRunId(fresh.runId);
-        return;
-      }
-      setRuns(remaining);
-      if (runId === activeRunId) {
-        const neighbour = remaining[Math.min(idx, remaining.length - 1)];
-        setActiveRunId(neighbour.runId);
-        setActiveProfile(neighbour.profile);
-      }
-    },
-    [runs, activeRunId, activeProfile],
-  );
-
   const handleResumeSession = useCallback(
     async (sessionId: string) => {
       // Already open as a live run? Re-attach to it (keeps live streaming).
@@ -557,7 +572,22 @@ function Layout({
         const items = (await window.hermesAPI.getSessionMessages(
           sessionId,
         )) as DbHistoryItem[];
-        const run = mintRun(activeProfile, dbItemsToChatMessages(items));
+        const rawMessages = dbItemsToChatMessages(items);
+        // Prefix resumed sessions with a historical divider so the user
+        // knows this is a previous conversation (issue #754).
+        const messages =
+          rawMessages.length > 0
+            ? [
+                {
+                  id: `resumed-divider-${sessionId}`,
+                  role: "agent" as const,
+                  content: `———— 以下是之前的对话记录 ————`,
+                  historical: true,
+                },
+                ...rawMessages,
+              ]
+            : rawMessages;
+        const run = mintRun(activeProfile, messages);
         run.sessionId = sessionId;
         setRuns(
           (prev) => openSessionRunTransition(prev, activeRunId, run).runs,
@@ -632,7 +662,7 @@ function Layout({
               view === "chat" && currentSessionId === null ? "active" : ""
             }`}
             onClick={handleNewChat}
-            title={t("navigation.newChat")}
+            title={t("navigation.newChat") + (activeProfile !== "default" ? ` (${activeProfile})` : "")}
             aria-label={t("navigation.newChat")}
           >
             <Plus size={16} />
@@ -834,7 +864,7 @@ function Layout({
         {visitedViews.has("discover") && (
           <div style={paneStyle("discover")}>
             {remoteMode ? (
-              <RemoteNotice feature="Discover" />
+              <RemoteNotice feature="发现" />
             ) : (
               <Discover
                 profile={activeProfile}
@@ -848,7 +878,7 @@ function Layout({
         {visitedViews.has("agents") && (
           <div style={paneStyle("agents")}>
             {remoteMode ? (
-              <RemoteNotice feature="Profiles" />
+              <RemoteNotice feature="Agent 配置" />
             ) : (
               <Agents
                 activeProfile={activeProfile}
@@ -861,14 +891,16 @@ function Layout({
 
         {visitedViews.has("office") && (
           <div style={paneStyle("office")}>
-            <Office profile={activeProfile} visible={view === "office"} />
+            <Suspense fallback={<div className="pane-loading">加载中…</div>}>
+              <Office profile={activeProfile} visible={view === "office"} />
+            </Suspense>
           </div>
         )}
 
         {visitedViews.has("providers") && (
           <div style={paneStyle("providers")}>
             {remoteMode ? (
-              <RemoteNotice feature="Providers" />
+              <RemoteNotice feature="服务商" />
             ) : (
               <Providers
                 profile={activeProfile}
@@ -881,7 +913,7 @@ function Layout({
         {visitedViews.has("skills") && (
           <div style={paneStyle("skills")}>
             {remoteMode ? (
-              <RemoteNotice feature="Skills" />
+              <RemoteNotice feature="技能" />
             ) : (
               <Skills profile={activeProfile} />
             )}
@@ -891,7 +923,7 @@ function Layout({
         {visitedViews.has("memory") && (
           <div style={paneStyle("memory")}>
             {remoteMode ? (
-              <RemoteNotice feature="Memory" />
+              <RemoteNotice feature="记忆" />
             ) : (
               <Memory profile={activeProfile} />
             )}
@@ -920,7 +952,7 @@ function Layout({
         {visitedViews.has("kanban") && (
           <div style={paneStyle("kanban")}>
             {remoteMode ? (
-              <RemoteNotice feature="Kanban" />
+              <RemoteNotice feature="看板" />
             ) : (
               <Kanban profile={activeProfile} visible={view === "kanban"} />
             )}
@@ -930,7 +962,7 @@ function Layout({
         {visitedViews.has("gateway") && (
           <div style={paneStyle("gateway")}>
             {remoteMode ? (
-              <RemoteNotice feature="Gateway" />
+              <RemoteNotice feature="网关" />
             ) : (
               <Gateway profile={activeProfile} />
             )}

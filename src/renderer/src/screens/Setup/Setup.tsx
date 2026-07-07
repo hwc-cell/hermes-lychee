@@ -69,10 +69,14 @@ function Setup({
       const configProvider = isLocal ? "custom" : provider.configProvider;
       const configBaseUrl = isLocal ? baseUrl.trim() : provider.baseUrl;
       const configModel = modelName.trim() || "";
+      // Auto-preset context window for known providers
+      const ctxWindow = (provider as any).defaultContext || undefined;
       await window.hermesAPI.setModelConfig(
         configProvider,
         configModel,
         configBaseUrl,
+        undefined, // profile
+        ctxWindow, // contextLength
       );
 
       onComplete();
@@ -106,6 +110,9 @@ function Setup({
                 onClick={() => {
                   setSelectedProvider(p.id);
                   setError("");
+                  // Auto-fill default model name for known providers
+                  const defaultModel = (p as any).defaultModel || "";
+                  if (defaultModel) setModelName(defaultModel);
                 }}
               >
                 {active && (

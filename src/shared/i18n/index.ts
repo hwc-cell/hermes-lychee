@@ -139,6 +139,8 @@ import memoryZh from "./locales/zh-CN/memory";
 import installZh from "./locales/zh-CN/install";
 import constantsZh from "./locales/zh-CN/constants";
 import kanbanZh from "./locales/zh-CN/kanban";
+import diagnoseZh from "./locales/zh-CN/diagnose";
+import discoverZh from "./locales/zh-CN/discover";
 import commonZhTw from "./locales/zh-TW/common";
 import navigationZhTw from "./locales/zh-TW/navigation";
 import welcomeZhTw from "./locales/zh-TW/welcome";
@@ -422,6 +424,8 @@ export const resources = {
       install: installZh,
       constants: constantsZh,
       kanban: kanbanZh,
+      diagnose: diagnoseZh,
+      discover: discoverZh,
     },
   },
   "zh-TW": {
