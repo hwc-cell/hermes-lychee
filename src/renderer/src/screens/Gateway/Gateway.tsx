@@ -32,24 +32,33 @@ interface ToolsetPrereq {
   guide: string;
 }
 
-/** Check if a toolset needs extra config. Returns null when always ready,
- *  or guidance text to show below the tool description. */
-function getToolsetPrerequisite(key: string): ToolsetPrereq | null {
+/** Check if a toolset has its global prerequisites met.
+ *  `envVars` is the full profile .env — null while still loading. */
+function getToolsetPrerequisite(
+  key: string,
+  envVars: Record<string, string> | null,
+): ToolsetPrereq | null {
+  // Still loading env — don't block, just show nothing
+  if (envVars === null) return null;
+
+  const has = (names: string[]): boolean =>
+    names.some((n) => (envVars[n] ?? "").trim());
+
   switch (key) {
     case "web":
+      if (has(["TAVILY_API_KEY", "BRAVE_API_KEY", "SERPER_API_KEY", "BING_API_KEY"]))
+        return null;
       return {
         met: false,
-        guide: "需要联网搜索服务——前往「服务商」页面设置 Tavily / Brave / Serper / Bing 任一 API Key",
+        guide: "前往「服务商」页面设置 Tavily / Brave / Serper / Bing 任一搜索 Key",
       };
     case "browser":
-      return {
-        met: false,
-        guide: "需要 Playwright 浏览器——首次使用会自动安装，或手动 brew install playwright",
-      };
+      return null; // Auto-installs on first use
     case "image_gen":
+      if (has(["FAL_KEY", "REPLICATE_API_KEY"])) return null;
       return {
         met: false,
-        guide: "需要图片生成服务——前往「服务商」页面设置 FAL_KEY 等图片 API Key",
+        guide: "前往「服务商」页面设置图片生成 API Key（如 FAL_KEY）",
       };
     default:
       return null;
@@ -75,9 +84,15 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
     null,
   );
   const [generatingKey, setGeneratingKey] = useState(false);
+  const [envVars, setEnvVars] = useState<Record<string, string> | null>(null);
   const gatewayStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  // Load global env vars for toolset prerequisite checks
+  useEffect(() => {
+    window.hermesAPI.getEnv(profile).then(setEnvVars).catch(() => setEnvVars({}));
+  }, [profile]);
 
   const loadConfig = useCallback(async (): Promise<void> => {
     setLoadError(null);
@@ -1075,7 +1090,7 @@ function PlatformCard({
                   </div>
                   <div className="gateway-capability-list">
                     {platform.toolsets.map((toolset) => {
-                      const prereq = getToolsetPrerequisite(toolset.key);
+                      const prereq = getToolsetPrerequisite(toolset.key, envVars);
                       const hasPrereq = !prereq || prereq.met;
                       return (
                       <div
@@ -1099,21 +1114,31 @@ function PlatformCard({
                           </div>
                           {!hasPrereq && prereq && (
                             <div style={{
-                              fontSize: 12, color: "var(--text-muted)",
+                              fontSize: 12, color: "var(--warning)",
                               marginTop: 6, lineHeight: 1.5,
                             }}>
-                              💡 {prereq.guide}
+                              ⚠ 未配置 — {prereq.guide}
+                            </div>
+                          )}
+                          {toolset.enabled && !hasPrereq && (
+                            <div style={{
+                              fontSize: 12, color: "var(--error)",
+                              marginTop: 4,
+                            }}>
+                              已开启但条件不满足，无法使用
                             </div>
                           )}
                         </div>
                         <label
                           className="tools-toggle"
-                          title={`${toolset.enabled ? t("gateway.disable") : t("gateway.enable")} ${toolset.label}`}
+                          title={hasPrereq
+                            ? `${toolset.enabled ? t("gateway.disable") : t("gateway.enable")} ${toolset.label}`
+                            : `需要先配置 ${toolset.label} 所需服务`}
                         >
                           <input
                             type="checkbox"
                             checked={toolset.enabled}
-                            disabled={isBusy}
+                            disabled={isBusy || !hasPrereq}
                             onChange={() => requestToolsetToggle(toolset)}
                           />
                           <span className="tools-toggle-track" />
