@@ -492,6 +492,19 @@ function Models({
     },
   };
 
+  /** Dedicated service options for tasks that don't need a full LLM. */
+  const AUX_DEDICATED_SERVICES: Record<string, { value: string; label: string; guide: string }[]> = {
+    vision: [
+      { value: "fal", label: "FAL.ai 视觉服务", guide: "使用 FAL_KEY 环境变量中的 API Key，无需指定模型名" },
+    ],
+    web_extract: [
+      { value: "firecrawl", label: "Firecrawl 网页抓取", guide: "使用 FIRECRAWL_API_KEY 环境变量" },
+      { value: "jina", label: "Jina AI 网页读取", guide: "使用 JINA_API_KEY 环境变量" },
+    ],
+  };
+
+  const taskDedicatedServices = auxEditingTask ? (AUX_DEDICATED_SERVICES[auxEditingTask] ?? []) : [];
+
   function openAuxEdit(task: string): void {
     const current = auxConfig.find((c) => c.task === task);
     setAuxEditingTask(task);
@@ -1022,6 +1035,15 @@ function Models({
                   }}
                 >
                   <option value="auto">{t("constants.auxiliaryAuto")}</option>
+                  {taskDedicatedServices.length > 0 && (
+                    <optgroup label="专用服务（无需配模型）">
+                      {taskDedicatedServices.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                   {PROVIDERS.options.map((p) => (
                     <option key={p.value} value={p.value}>
                       {t(p.label)}
@@ -1032,6 +1054,14 @@ function Models({
 
               {auxFormProvider !== "auto" && (
                 <>
+                  {taskDedicatedServices.some((s) => s.value === auxFormProvider) ? (
+                    <div className="models-modal-field">
+                      <div className="settings-field-hint" style={{ color: "var(--ok)" }}>
+                        ✅ {taskDedicatedServices.find((s) => s.value === auxFormProvider)!.guide}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   <div className="models-modal-field">
                     <label className="models-modal-label">
                       {t("constants.auxiliaryModelLabel")}
@@ -1103,6 +1133,7 @@ function Models({
                       />
                     </div>
                   )}
+                  </>)}
                 </>
               )}
             </div>
