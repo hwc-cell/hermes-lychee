@@ -27,6 +27,42 @@ import type {
 type DraftValues = Record<string, Record<string, string>>;
 type PlatformMessage = Record<string, MessagingPlatformTestResponse | null>;
 
+interface ToolsetPrereq {
+  met: boolean;
+  guide: string;
+}
+
+/** Check if a toolset has its prerequisites configured. Returns null when
+ *  the toolset is always available, or metadata about how to configure it. */
+function getToolsetPrerequisite(
+  key: string,
+  platform: MessagingPlatformInfo,
+): ToolsetPrereq | null {
+  const hasEnv = (names: string[]): boolean =>
+    platform.env_vars?.some(
+      (v) => names.includes(v.key) && (v.value ?? "").trim(),
+    ) ?? false;
+
+  switch (key) {
+    case "web":
+      if (hasEnv(["TAVILY_API_KEY", "BRAVE_API_KEY", "SERPER_API_KEY", "BING_API_KEY"]))
+        return null;
+      return {
+        met: false,
+        guide: "前往「服务商」页面设置 Tavily/Brave/Serper/Bing 任一搜索服务的 API Key",
+      };
+    case "image_gen":
+      if (hasEnv(["FAL_KEY", "OPENAI_API_KEY", "REPLICATE_API_KEY"]))
+        return null;
+      return {
+        met: false,
+        guide: "前往「服务商」页面设置图片生成服务的 API Key（如 FAL_KEY）",
+      };
+    default:
+      return null; // terminal, file, code_execution, vision, tts, skills, memory — always available
+  }
+}
+
 function Gateway({ profile }: { profile?: string }): React.JSX.Element {
   const { t } = useI18n();
   const [gatewayRunning, setGatewayRunning] = useState(false);
@@ -1045,11 +1081,14 @@ function PlatformCard({
                     {t("gateway.capabilities")}
                   </div>
                   <div className="gateway-capability-list">
-                    {platform.toolsets.map((toolset) => (
+                    {platform.toolsets.map((toolset) => {
+                      const prereq = getToolsetPrerequisite(toolset.key, platform);
+                      const hasPrereq = !prereq || prereq.met;
+                      return (
                       <div
                         className={`gateway-capability-row${
                           toolset.risk === "high" ? " high-risk" : ""
-                        }`}
+                        }${!hasPrereq ? " not-ready" : ""}`}
                         key={toolset.key}
                       >
                         <div className="gateway-capability-copy">
@@ -1065,15 +1104,33 @@ function PlatformCard({
                           <div className="gateway-capability-description">
                             {toolset.description}
                           </div>
+                          {!hasPrereq && prereq && (
+                            <div style={{
+                              fontSize: 12, color: "var(--warning)",
+                              marginTop: 6, lineHeight: 1.5,
+                            }}>
+                              ⚠ 未配置：{prereq.guide}
+                            </div>
+                          )}
+                          {toolset.enabled && !hasPrereq && (
+                            <div style={{
+                              fontSize: 12, color: "var(--error)",
+                              marginTop: 4,
+                            }}>
+                              已开启但前置条件不满足，无法使用
+                            </div>
+                          )}
                         </div>
                         <label
                           className="tools-toggle"
-                          title={`${toolset.enabled ? t("gateway.disable") : t("gateway.enable")} ${toolset.label}`}
+                          title={hasPrereq
+                            ? `${toolset.enabled ? t("gateway.disable") : t("gateway.enable")} ${toolset.label}`
+                            : `需要配置后才能启用 ${toolset.label}`}
                         >
                           <input
                             type="checkbox"
                             checked={toolset.enabled}
-                            disabled={isBusy}
+                            disabled={isBusy || !hasPrereq}
                             onChange={() => requestToolsetToggle(toolset)}
                           />
                           <span className="tools-toggle-track" />
@@ -1108,7 +1165,7 @@ function PlatformCard({
                           </div>
                         )}
                       </div>
-                    ))}
+                    })}
                   </div>
                 </div>
               )}
