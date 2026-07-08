@@ -254,8 +254,8 @@ export const PROVIDERS = {
       configProvider: "custom",
       baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
       needsKey: true,
-      defaultModel: "qwen-plus",
-      defaultContext: 1048576, // Qwen Plus = 1M context
+      defaultModel: "qwen3.7-plus",
+      defaultContext: 1048576, // Qwen3.7-Plus = 1M context，官方推荐开发首选
     },
     {
       id: "zai",
@@ -282,8 +282,8 @@ export const PROVIDERS = {
       configProvider: "custom",
       baseUrl: "https://api.moonshot.cn/v1",
       needsKey: true,
-      defaultModel: "kimi-k2.6",
-      defaultContext: 262144, // K2.6 = 256K context
+      defaultModel: "kimi-k2.7-code",
+      defaultContext: 262144, // K2.7-Code = 256K context，最新旗舰
     },
     {
       id: "minimax",
@@ -297,7 +297,7 @@ export const PROVIDERS = {
       baseUrl: "https://api.minimax.chat/v1",
       needsKey: true,
       defaultModel: "minimax-m2.7",
-      defaultContext: 1048576, // M2.7 = 1M context
+      defaultContext: 196608, // M2.7 = 192K context（阿里云百炼官方数据）
     },
   ],
 };
