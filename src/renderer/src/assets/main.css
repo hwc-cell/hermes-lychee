@@ -11911,6 +11911,19 @@ html {
   opacity: 0.8;
 }
 
+.tools-restart-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 50, 0.1);
+  border: 1px solid rgba(255, 255, 50, 0.25);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
 .tools-card-top {
   display: flex;
   align-items: flex-start;

@@ -228,6 +228,7 @@ function Tools({
   const [showAddMcp, setShowAddMcp] = useState(false);
   const [addForm, setAddForm] = useState<AddMcpForm>(EMPTY_ADD_FORM);
   const [mcpSearch, setMcpSearch] = useState("");
+  const [restartHint, setRestartHint] = useState(false);
 
   const loadToolsets = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -265,6 +266,12 @@ function Tools({
       prev.map((t) => (t.key === key ? { ...t, enabled: !currentEnabled } : t)),
     );
     await window.hermesAPI.setToolsetEnabled(key, !currentEnabled, profile);
+    setRestartHint(true);
+  }
+
+  async function handleRestartGateway(): Promise<void> {
+    await window.hermesAPI.restartGateway(profile);
+    setRestartHint(false);
   }
 
   async function reloadMcp(): Promise<void> {
@@ -488,6 +495,17 @@ function Tools({
                   </div>
                 )})}
               </div>
+              {restartHint && (
+                <div className="tools-restart-banner">
+                  <span>⚡ 工具开关已保存。需重启网关才能生效</span>
+                  <button className="btn btn-primary btn-sm" onClick={handleRestartGateway}>
+                    重启网关
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setRestartHint(false)}>
+                    稍后
+                  </button>
+                </div>
+              )}
             </>
           )}
 
