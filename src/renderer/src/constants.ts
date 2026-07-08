@@ -241,7 +241,7 @@ export const PROVIDERS = {
       baseUrl: "https://api.deepseek.com/v1",
       needsKey: true,
       defaultModel: "deepseek-chat",
-      defaultContext: 1000000,
+      defaultContext: 131072, // V3/V4 = 128K context
     },
     {
       id: "qwen",
@@ -255,7 +255,7 @@ export const PROVIDERS = {
       baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
       needsKey: true,
       defaultModel: "qwen-plus",
-      defaultContext: 131072,
+      defaultContext: 1048576, // Qwen Plus = 1M context
     },
     {
       id: "zai",
@@ -268,8 +268,8 @@ export const PROVIDERS = {
       configProvider: "zai",
       baseUrl: "https://open.bigmodel.cn/api/paas/v4",
       needsKey: true,
-      defaultModel: "glm-4",
-      defaultContext: 131072,
+      defaultModel: "glm-5",
+      defaultContext: 131072, // GLM-5 = 128K context
     },
     {
       id: "kimi",
@@ -282,8 +282,8 @@ export const PROVIDERS = {
       configProvider: "custom",
       baseUrl: "https://api.moonshot.cn/v1",
       needsKey: true,
-      defaultModel: "moonshot-v1-8k",
-      defaultContext: 131072,
+      defaultModel: "kimi-k2.6",
+      defaultContext: 262144, // K2.6 = 256K context
     },
     {
       id: "minimax",
@@ -296,8 +296,8 @@ export const PROVIDERS = {
       configProvider: "minimax",
       baseUrl: "https://api.minimax.chat/v1",
       needsKey: true,
-      defaultModel: "abab6.5s-chat",
-      defaultContext: 131072,
+      defaultModel: "minimax-m2.7",
+      defaultContext: 1048576, // M2.7 = 1M context
     },
   ],
 };
