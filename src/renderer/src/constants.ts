@@ -240,8 +240,8 @@ export const PROVIDERS = {
       configProvider: "deepseek",
       baseUrl: "https://api.deepseek.com/v1",
       needsKey: true,
-      defaultModel: "deepseek-chat",
-      defaultContext: 131072, // V3/V4 = 128K context
+      defaultModel: "deepseek-v4-flash",
+      defaultContext: 1048576, // V4 Flash = 1M context, 384K max output
     },
     {
       id: "qwen",
