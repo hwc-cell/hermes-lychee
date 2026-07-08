@@ -228,8 +228,16 @@ const hermesAPI = {
     model: string,
     baseUrl: string,
     profile?: string,
+    contextLength?: number | null,
   ): Promise<boolean> =>
-    ipcRenderer.invoke("set-model-config", provider, model, baseUrl, profile),
+    ipcRenderer.invoke(
+      "set-model-config",
+      provider,
+      model,
+      baseUrl,
+      profile,
+      contextLength,
+    ),
 
   // Auxiliary (side-task) model routing
   getAuxiliaryConfig: (

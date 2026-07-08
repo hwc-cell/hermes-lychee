@@ -80,6 +80,11 @@ function Providers({
   const modelLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 高级选项
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [contextLength, setContextLength] = useState("");
+  const defaultContext = useRef(0);
+
   // Credential pool — entries follow the upstream engine schema
   // (issue #367). Old `{key, label}` entries are read tolerantly via
   // the optional `key` field on CredentialPoolEntry.
@@ -184,12 +189,13 @@ function Providers({
       modelName,
       modelBaseUrl,
       profile,
+      contextLength ? parseInt(contextLength, 10) || null : null,
     );
     persistedCustomUrl.current =
       configProvider === "custom" && Boolean(modelBaseUrl.trim());
     setModelSaved(true);
     setTimeout(() => setModelSaved(false), 2000);
-  }, [modelProvider, modelName, modelBaseUrl, profile]);
+  }, [modelProvider, modelName, modelBaseUrl, profile, contextLength]);
 
   useEffect(() => {
     if (!modelLoaded.current) return;
@@ -335,9 +341,6 @@ function Providers({
     // closed it before the custom base URL / API key could be entered.
     setEditingProvider(true);
     if (id === "custom" || id === "local") {
-      // The "local" card has no provider id of its own — it routes as custom.
-      // Leave base_url untouched: empty stays empty (nothing preselected) while
-      // an already-chosen preset/custom URL is preserved when re-opening.
       setModelProvider("custom");
     } else if (id in OPENAI_COMPATIBLE_BASE_URLS) {
       setModelProvider(id);
@@ -345,6 +348,14 @@ function Providers({
     } else {
       setModelProvider(id);
       setModelBaseUrl("");
+    }
+    // 自动填充高级选项默认值
+    const kit = PROVIDERS.setup.find((p) => p.id === id);
+    if (kit?.defaultContext) {
+      defaultContext.current = kit.defaultContext;
+      if (!contextLength) setContextLength(String(kit.defaultContext));
+    } else {
+      defaultContext.current = 0;
     }
   }
 
@@ -636,6 +647,51 @@ function Providers({
                     </div>
                   </div>
                 )}
+
+                {/* 高级选项 */}
+                <div className="settings-field" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn-ghost settings-advanced-toggle"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: 0,
+                    }}
+                  >
+                    <span>{showAdvanced ? "▾" : "▸"}</span>
+                    <span>高级选项</span>
+                  </button>
+                  {showAdvanced && (
+                    <div style={{ marginTop: 12 }}>
+                      <div className="settings-field">
+                        <label className="settings-field-label">
+                          上下文窗口（tokens）
+                        </label>
+                        <input
+                          className="input"
+                          type="text"
+                          value={contextLength}
+                          onChange={(e) => setContextLength(e.target.value)}
+                          placeholder={
+                            defaultContext.current
+                              ? `默认 ${defaultContext.current.toLocaleString()}`
+                              : "不填则使用模型默认值"
+                          }
+                        />
+                        <div className="settings-field-hint">
+                          {defaultContext.current
+                            ? `已自动填入 ${defaultContext.current.toLocaleString()}，可手动修改`
+                            : "留空则使用后端默认上下文窗口"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="provider-summary">

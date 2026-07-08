@@ -303,6 +303,7 @@ interface HermesAPI {
     model: string,
     baseUrl: string,
     profile?: string,
+    contextLength?: number | null,
   ) => Promise<boolean>;
 
   // Connection mode (local / remote / ssh)
