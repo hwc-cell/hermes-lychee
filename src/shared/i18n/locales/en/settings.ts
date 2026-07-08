@@ -161,6 +161,12 @@ export default {
     "You&apos;re connected to a remote Hermes server. Model selection, provider API keys, and credentials are managed on the server&apos;s <code>~/.hermes/.env</code> and <code>config.yaml</code>. Edit them on the host (e.g. <code>docker exec -it hermes vi /opt/data/.env</code>) and restart the container.",
   connectionMode: "Connection Mode",
   switchedToLocal: "Switched to local mode",
+  chatTransport: "Chat transport",
+  transportRemoteHint:
+    "Auto tries the Hermes dashboard WebSocket first, then falls back to the legacy remote API. Dashboard requires the remote Hermes dashboard URL and a valid dashboard session token.",
+  transportSshHint:
+    "Auto tries the Hermes dashboard WebSocket through the SSH tunnel first, then falls back to legacy SSH chat. Dashboard forces the upstream dashboard path; Legacy keeps the older SSH transport.",
+  checking: "Checking…",
 
   // Community
   communityTitle: "Community",

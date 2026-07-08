@@ -127,6 +127,12 @@ export default {
     "你已连接远程 Hermes 服务器。模型选择、服务商 API Key 和凭据均在服务器的 <code>~/.hermes/.env</code> 和 <code>config.yaml</code> 中管理。请在主机上编辑后（如 <code>docker exec -it hermes vi /opt/data/.env</code>）重启容器。",
   connectionMode: "模式",
   switchedToLocal: "已切换到本地模式",
+  chatTransport: "聊天传输方式",
+  transportRemoteHint:
+    "自动优先使用 Dashboard WebSocket，不可用时回退到传统远程 API。Dashboard 需要远程 Hermes 的 Dashboard URL 和有效的会话令牌。",
+  transportSshHint:
+    "自动优先通过 SSH 隧道使用 Dashboard WebSocket，不可用时回退到传统 SSH 聊天。Dashboard 强制走 Dashboard 路径；Legacy 保持旧的 SSH 传输方式。",
+  checking: "检测中…",
 
   // About & Updates
   agentSubtitle: "本地 AI 引擎",

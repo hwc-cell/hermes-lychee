@@ -184,7 +184,7 @@ export default function ConnectionPane(): React.JSX.Element {
             </div>
           </div>
           <div className="settings-field">
-            <label className="settings-field-label">Chat transport</label>
+            <label className="settings-field-label">{t("settings.chatTransport")}</label>
             <div className="settings-theme-options">
               {CHAT_TRANSPORT_OPTIONS.map((option) => (
                 <button
@@ -202,16 +202,14 @@ export default function ConnectionPane(): React.JSX.Element {
               ))}
             </div>
             <div className="settings-field-hint">
-              Auto tries the Hermes dashboard WebSocket first, then falls back
-              to the legacy remote API. Dashboard requires the remote Hermes
-              dashboard URL and a valid dashboard session token.
+              {t("settings.transportRemoteHint")}
             </div>
             {transportProbe && (
               <div
                 className={`settings-transport-status settings-transport-status--${transportProbe.kind}`}
               >
                 <span>{transportProbe.label}</span>
-                {transportProbe.loading && <span>Checking…</span>}
+                {transportProbe.loading && <span>{t("settings.checking")}</span>}
                 {transportProbe.detail && <code>{transportProbe.detail}</code>}
               </div>
             )}
@@ -307,7 +305,7 @@ export default function ConnectionPane(): React.JSX.Element {
             </div>
           </div>
           <div className="settings-field">
-            <label className="settings-field-label">Chat transport</label>
+            <label className="settings-field-label">{t("settings.chatTransport")}</label>
             <div className="settings-theme-options">
               {CHAT_TRANSPORT_OPTIONS.map((option) => (
                 <button
@@ -323,16 +321,14 @@ export default function ConnectionPane(): React.JSX.Element {
               ))}
             </div>
             <div className="settings-field-hint">
-              Auto tries the Hermes dashboard WebSocket through the SSH tunnel
-              first, then falls back to legacy SSH chat. Dashboard forces the
-              upstream dashboard path; Legacy keeps the older SSH transport.
+              {t("settings.transportSshHint")}
             </div>
             {transportProbe && (
               <div
                 className={`settings-transport-status settings-transport-status--${transportProbe.kind}`}
               >
                 <span>{transportProbe.label}</span>
-                {transportProbe.loading && <span>Checking…</span>}
+                {transportProbe.loading && <span>{t("settings.checking")}</span>}
                 {transportProbe.detail && <code>{transportProbe.detail}</code>}
               </div>
             )}
