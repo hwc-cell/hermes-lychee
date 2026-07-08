@@ -108,10 +108,10 @@ export function useVoiceInput(
         // A late interim must not overwrite the final transcript.
         if (!isFinal && finalizingRef.current) return;
         if (text) onResultRef.current(text, isFinal);
-        else if (isFinal) setError("No speech detected.");
+        else if (isFinal) setError("未检测到语音。");
       } catch (e) {
         // Interim failures are transient — only surface the final one.
-        if (isFinal) setError((e as Error).message || "Transcription failed.");
+        if (isFinal) setError((e as Error).message || "转录失败。");
       } finally {
         inFlightRef.current = false;
       }
@@ -121,7 +121,7 @@ export function useVoiceInput(
 
   const startMediaRecorder = useCallback(async () => {
     if (!canRecord) {
-      setError("Voice input isn't available here.");
+      setError("语音输入在此环境不可用。");
       return;
     }
     try {
@@ -157,7 +157,7 @@ export function useVoiceInput(
       setRecording(true);
       setError(null);
     } catch {
-      setError("Microphone access was denied or is unavailable.");
+      setError("麦克风权限被拒绝或不可用。");
       setRecording(false);
     }
   }, [canRecord, stopStream, transcribeAccumulated]);

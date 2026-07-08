@@ -260,7 +260,7 @@ export const FileViewer = memo(function FileViewer({
               title={t("worktree.openInEditor")}
             >
               <ExternalLink size={14} />
-              <span className="file-viewer-open-text">Open</span>
+              <span className="file-viewer-open-text">打开</span>
             </button>
             <button
               className="btn-ghost file-viewer-close"
@@ -295,10 +295,10 @@ export const FileViewer = memo(function FileViewer({
             <div className="file-viewer-binary">
               <div className="file-viewer-binary-icon">📄</div>
               <div className="file-viewer-binary-text">
-                Binary file cannot be previewed
+                二进制文件无法预览
               </div>
               <div className="file-viewer-binary-hint">
-                Click Open to view in default application
+                点击「打开」使用系统默认应用查看
               </div>
             </div>
           ) : (

@@ -142,7 +142,7 @@ export default function Discover({
           })),
         );
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load");
+        setError(e instanceof Error ? e.message : "加载失败");
         setCatalog(EMPTY);
       } finally {
         setLoading(false);
@@ -276,7 +276,7 @@ export default function Discover({
       setActions((a) => ({ ...a, [key]: "error" }));
       setActionError((e) => ({
         ...e,
-        [key]: err instanceof Error ? err.message : "Failed",
+        [key]: err instanceof Error ? err.message : "失败",
       }));
     }
   }
@@ -309,7 +309,7 @@ export default function Discover({
       setActions((a) => ({ ...a, [key]: "error" }));
       setActionError((e) => ({
         ...e,
-        [key]: err instanceof Error ? err.message : "Failed",
+        [key]: err instanceof Error ? err.message : "失败",
       }));
     }
   }

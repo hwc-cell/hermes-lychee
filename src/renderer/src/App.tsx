@@ -47,13 +47,13 @@ function App(): React.JSX.Element {
     let isRemote = false;
 
     try {
-      setSplashStatus("Checking connection…");
+      setSplashStatus("检查连接中…");
       const conn = await window.hermesAPI.getConnectionConfig();
       isRemote = conn.mode === "remote" || conn.mode === "ssh";
       setConnectionMode(conn.mode);
 
       if (conn.mode === "ssh" && conn.ssh) {
-        setSplashStatus("Starting SSH tunnel…");
+        setSplashStatus("启动 SSH 隧道中…");
         try {
           await window.hermesAPI.startSshTunnel();
         } catch (tunnelErr) {
@@ -61,7 +61,7 @@ function App(): React.JSX.Element {
         }
         next = "main";
       } else if (conn.mode === "remote" && conn.remoteUrl) {
-        setSplashStatus("Testing remote connection…");
+        setSplashStatus("测试远程连接中…");
         const ok = await window.hermesAPI.testRemoteConnection(conn.remoteUrl);
         if (ok) {
           next = "main";
@@ -70,7 +70,7 @@ function App(): React.JSX.Element {
           next = "main";
         }
       } else {
-        setSplashStatus("Checking local install…");
+        setSplashStatus("检查本地安装中…");
         const status = await window.hermesAPI.checkInstall();
         if (!status.installed) {
           next = "welcome";
@@ -84,7 +84,7 @@ function App(): React.JSX.Element {
         // splash is still visible so the first render is snappy. Cap at 800ms
         // so it never pushes us past the 3s minimum.
         if (next === "main") {
-          setSplashStatus("Checking configuration…");
+          setSplashStatus("检查配置中…");
           await Promise.race([
             Promise.all([
               window.hermesAPI

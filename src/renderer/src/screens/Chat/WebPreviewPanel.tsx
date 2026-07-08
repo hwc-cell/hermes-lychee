@@ -421,7 +421,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
           isResizing ? "web-preview-resize-handle-active" : ""
         }`}
         onPointerDown={startResize}
-        title="Drag to resize"
+        title="拖动调整大小"
       />
       <div className="web-preview-header">
         <button
@@ -429,7 +429,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
           className="web-preview-btn"
           onClick={handleBack}
           disabled={!canGoBack}
-          title={t("common.back") || "Back"}
+          title={t("common.back") || "后退"}
         >
           <ArrowLeft size={16} />
         </button>
@@ -438,7 +438,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
           className="web-preview-btn"
           onClick={handleForward}
           disabled={!canGoForward}
-          title={t("common.forward") || "Forward"}
+          title={t("common.forward") || "前进"}
         >
           <ArrowRight size={16} />
         </button>
@@ -446,7 +446,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
           type="button"
           className="web-preview-btn"
           onClick={handleReload}
-          title={t("common.reload") || "Reload"}
+          title={t("common.reload") || "刷新"}
         >
           <RotateCw size={16} className={isLoading ? "animate-spin" : ""} />
         </button>
@@ -454,7 +454,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
           type="button"
           className={`web-preview-btn ${isInspecting ? "web-preview-btn-active" : ""}`}
           onClick={() => setIsInspecting((prev) => !prev)}
-          title="Inspect Element"
+          title="检查元素"
         >
           <MousePointerClick size={16} />
         </button>
@@ -469,7 +469,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
             className="web-preview-address-input"
             value={inputUrl}
             onChange={(e) => setInputUrl(e.target.value)}
-            placeholder="Search or enter web address..."
+            placeholder="搜索或输入网址…"
           />
         </form>
 
@@ -478,7 +478,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
             type="button"
             className="web-preview-btn"
             onClick={handleOpenExternal}
-            title={t("worktree.open") || "Open in system browser"}
+            title={t("worktree.open") || "在系统浏览器中打开"}
           >
             <ExternalLink size={15} />
           </button>
@@ -486,7 +486,7 @@ export const WebPreviewPanel = memo(function WebPreviewPanel({
             type="button"
             className="web-preview-btn"
             onClick={onClose}
-            title={t("worktree.closeFile") || "Close"}
+            title={t("worktree.closeFile") || "关闭"}
           >
             <X size={16} />
           </button>

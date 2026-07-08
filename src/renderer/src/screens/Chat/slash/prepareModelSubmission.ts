@@ -22,7 +22,7 @@ export async function prepareModelSubmission(
   if (!content) {
     return {
       ok: false,
-      error: `/${source.command} produced an empty model prompt`,
+      error: `${source.command} 未生成有效模型提示`,
     };
   }
 

@@ -164,10 +164,10 @@ function Schedules({ profile }: SchedulesProps): React.JSX.Element {
         closeCreateModal();
         await loadJobs();
       } else {
-        setError(result.error || "Failed to create job");
+        setError(result.error || "创建任务失败");
       }
     } catch {
-      setError("Failed to create job");
+      setError("创建任务失败");
     } finally {
       setActionInProgress(null);
     }
@@ -182,10 +182,10 @@ function Schedules({ profile }: SchedulesProps): React.JSX.Element {
       if (result.success) {
         await loadJobs();
       } else {
-        setError(result.error || "Failed to remove job");
+        setError(result.error || "删除任务失败");
       }
     } catch {
-      setError("Failed to remove job");
+      setError("删除任务失败");
     } finally {
       setActionInProgress(null);
     }
@@ -202,10 +202,10 @@ function Schedules({ profile }: SchedulesProps): React.JSX.Element {
       if (result.success) {
         await loadJobs();
       } else {
-        setError(result.error || "Failed to update job");
+        setError(result.error || "更新任务失败");
       }
     } catch {
-      setError("Failed to update job");
+      setError("更新任务失败");
     } finally {
       setActionInProgress(null);
     }
@@ -219,10 +219,10 @@ function Schedules({ profile }: SchedulesProps): React.JSX.Element {
       if (result.success) {
         await loadJobs();
       } else {
-        setError(result.error || "Failed to trigger job");
+        setError(result.error || "触发任务失败");
       }
     } catch {
-      setError("Failed to trigger job");
+      setError("触发任务失败");
     } finally {
       setActionInProgress(null);
     }

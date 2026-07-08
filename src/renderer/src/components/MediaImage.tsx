@@ -68,12 +68,12 @@ export function MediaImage({
 
   if (failed) {
     return (
-      <span className="chat-media-error">⚠ Could not load {token.name}</span>
+      <span className="chat-media-error">⚠ 无法加载 {token.name}</span>
     );
   }
 
   if (!resolved) {
-    return <span className="chat-media-loading">Loading {token.name}…</span>;
+    return <span className="chat-media-loading">加载中 {token.name}…</span>;
   }
 
   return (
