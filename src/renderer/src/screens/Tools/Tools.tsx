@@ -91,6 +91,7 @@ function parseEnvText(value: string): Record<string, string> {
 /** Keys to check per tool. Empty array = always ready. */
 const TOOL_ENV_KEYS: Record<string, string[]> = {
   web: ["TAVILY_API_KEY", "BRAVE_API_KEY", "SERPER_API_KEY", "BING_API_KEY"],
+  vision: ["FAL_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"],
   image_gen: ["FAL_KEY", "REPLICATE_API_KEY"],
   video: ["FAL_KEY", "REPLICATE_API_KEY"],
   x_search: ["X_CONSUMER_KEY", "X_API_KEY"],
@@ -102,6 +103,7 @@ const TOOL_ENV_KEYS: Record<string, string[]> = {
 
 const TOOL_GUIDE: Record<string, string> = {
   web: "前往「服务商」页面设置搜索 Key（Tavily / Brave / Serper / Bing）",
+  vision: "前往「服务商」页面设置视觉 Key（FAL_KEY / OPENAI_API_KEY 等）",
   image_gen: "前往「服务商」页面设置图片生成 Key（FAL_KEY）",
   video: "前往「服务商」页面设置视频生成 Key",
   x_search: "前往「服务商」页面设置 X/Twitter API Key",
@@ -109,6 +111,12 @@ const TOOL_GUIDE: Record<string, string> = {
   spotify: "前往「服务商」页面设置 Spotify API Key",
   notion: "前往「服务商」页面设置 Notion API Key",
   google: "前往「服务商」页面设置 Google API Key",
+  computer_use: "需要先启用「视觉识别」并根据上方提示配置视觉 API Key",
+};
+
+/** 依赖其他工具的记录 */
+const TOOL_DEPENDS_ON: Record<string, string> = {
+  computer_use: "vision",
 };
 
 function getToolPrereq(key: string, env: Record<string, string> | null): string | null {
@@ -449,7 +457,15 @@ function Tools({
             <>
               <div className="tools-grid">
                 {toolsets.map((t) => {
-                  const prereq = getToolPrereq(t.key, envVars);
+                  let prereq = getToolPrereq(t.key, envVars);
+                  // 检查工具间依赖
+                  if (!prereq && TOOL_DEPENDS_ON[t.key]) {
+                    const depKey = TOOL_DEPENDS_ON[t.key];
+                    const depTool = toolsets.find((dt) => dt.key === depKey);
+                    if (!depTool?.enabled) {
+                      prereq = TOOL_GUIDE[t.key] ?? null;
+                    }
+                  }
                   const ready = !prereq;
                   return (
                   <div
@@ -457,7 +473,7 @@ function Tools({
                     className={`tools-card ${t.enabled ? "tools-card-enabled" : "tools-card-disabled"}${!ready ? " not-ready" : ""}`}
                     onClick={() => ready && handleToggle(t.key, t.enabled)}
                     style={ready ? {} : { cursor: "not-allowed", opacity: 0.65 }}
-                    title={ready ? undefined : prereq}
+                    title={ready ? undefined : prereq ?? undefined}
                   >
                     <div className="tools-card-top">
                       <ToolIcon toolKey={t.key} />
