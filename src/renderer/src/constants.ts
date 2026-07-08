@@ -293,7 +293,7 @@ export const PROVIDERS = {
       envKey: "MINIMAX_API_KEY",
       url: "https://platform.minimax.chat/user-center/basic-information/interface-key",
       placeholder: "...",
-      configProvider: "custom",
+      configProvider: "minimax",
       baseUrl: "https://api.minimax.chat/v1",
       needsKey: true,
       defaultModel: "abab6.5s-chat",
