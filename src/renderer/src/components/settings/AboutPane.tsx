@@ -182,6 +182,17 @@ export default function AboutPane(): React.JSX.Element {
               hermes-desktop ↗
             </a>
           </div>
+
+          <div className="settings-meta-grid" style={{ marginTop: 14 }}>
+            <div className="settings-meta-item" style={{ flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+              <span className="settings-meta-label" style={{ fontSize: 10 }}>原作者</span>
+              <a href="https://github.com/NousResearch/hermes-desktop" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-text)", textDecoration: "none" }}>NousResearch ↗</a>
+            </div>
+            <div className="settings-meta-item" style={{ flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+              <span className="settings-meta-label" style={{ fontSize: 10 }}>汉化改编</span>
+              <a href="https://space.bilibili.com/3493128967293256" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-text)", textDecoration: "none" }}>whcl412（B站）↗</a>
+            </div>
+          </div>
         </div>
       </section>
     </div>
