@@ -30,7 +30,13 @@ export const URL_KEY_MAP: ReadonlyArray<UrlKeyMapping> = [
   { pattern: /api\.aimlapi\.com/i, envKey: "AIMLAPI_API_KEY" },
   { pattern: /huggingface\.co/i, envKey: "HF_TOKEN" },
   { pattern: /api\.groq\.com/i, envKey: "GROQ_API_KEY" },
+  // 国产大模型 API Key 映射
   { pattern: /api\.deepseek\.com/i, envKey: "DEEPSEEK_API_KEY" },
+  { pattern: /dashscope\.aliyuncs\.com/i, envKey: "QWEN_API_KEY" },
+  { pattern: /open\.bigmodel\.cn/i, envKey: "GLM_API_KEY" },
+  { pattern: /api\.moonshot\.cn/i, envKey: "KIMI_API_KEY" },
+  { pattern: /api\.minimax\.chat/i, envKey: "MINIMAX_API_KEY" },
+  // Other providers
   { pattern: /api\.together\.xyz/i, envKey: "TOGETHER_API_KEY" },
   { pattern: /api\.fireworks\.ai/i, envKey: "FIREWORKS_API_KEY" },
   { pattern: /api\.cerebras\.ai/i, envKey: "CEREBRAS_API_KEY" },
