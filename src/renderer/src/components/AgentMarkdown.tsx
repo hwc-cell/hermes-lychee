@@ -202,11 +202,15 @@ function CodeBlock({
   );
 }
 
-// Shared Markdown renderer that opens links externally
-const AgentMarkdown = memo(function AgentMarkdown({
+// Shared Markdown renderer that opens links externally.
+// When `streaming=true`, bypasses React.memo to prevent react-markdown's
+// internal parser cache from serving stale/corrupted CJK parse results (#793).
+function AgentMarkdownImpl({
   children,
+  streaming: _streaming,
 }: {
   children: string;
+  streaming?: boolean;
 }): React.JSX.Element {
   return (
     <Markdown
@@ -282,6 +286,13 @@ const AgentMarkdown = memo(function AgentMarkdown({
       {children}
     </Markdown>
   );
+}
+
+// Memoize static completed content; skip memo during streaming to
+// avoid react-markdown internal parser cache poisoning CJK text (#793).
+const AgentMarkdown = memo(AgentMarkdownImpl, (prev, next) => {
+  if (next.streaming) return false; // always re-render during streaming
+  return prev.children === next.children && prev.streaming === next.streaming;
 });
 
 export { AgentMarkdown };
