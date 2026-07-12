@@ -5,6 +5,7 @@ import {
   Plug,
   Pencil,
   Puzzle,
+  Refresh,
   Settings,
   Signal,
   Sparkles,
@@ -22,6 +23,7 @@ import { MemoryEntries } from "../../screens/Memory/MemoryEntries";
 import type { MemoryData } from "../../screens/Memory/types";
 import { AppModal, AppModalTitle } from "../modal/AppModal";
 import ProfileWalletPane from "./ProfileWalletPane";
+import ProfileSyncPane from "./ProfileSyncPane";
 import type { ProfileSection } from "./ProfileModalContext";
 
 /** Mirrors the entry shape returned by `window.hermesAPI.listProfiles()`. */
@@ -54,6 +56,7 @@ export interface ProfileModalProps {
   /** Section to show when the modal opens; defaults to "profile". */
   initialSection?: ProfileSection;
 }
+
 type ProfileChipIcon = React.ComponentType<{
   size?: number;
   className?: string;
@@ -70,6 +73,7 @@ const PROFILE_SECTIONS: ReadonlyArray<{
   { id: "persona", labelKey: "agents.sectionPersona", Icon: Sparkles },
   { id: "agentMemory", labelKey: "agents.sectionAgentMemory", Icon: Database },
   { id: "wallet", labelKey: "agents.sectionWallet", Icon: Wallet },
+  { id: "sync", labelKey: "agents.sectionSync", Icon: Refresh },
   { id: "advanced", labelKey: "agents.sectionAdvanced", Icon: Settings },
 ];
 
@@ -510,6 +514,8 @@ export default function ProfileModal({
             )}
 
             {section === "wallet" && <ProfileWalletPane profile={profile.id} />}
+
+            {section === "sync" && <ProfileSyncPane profile={profile.id} />}
 
             {section === "advanced" && (
               <div className="profile-modal-pane">

@@ -92,7 +92,11 @@ import {
   detectDeviceCode,
 } from "../hermes-auth";
 import { startDeviceLogin, cancelDeviceLogin } from "../hermes-account";
-import { syncAgents, getAgentSyncStatus } from "../agent-sync";
+import {
+  syncAgents,
+  getAgentSyncStatus,
+  getLinkedAgentId,
+} from "../agent-sync";
 import {
   getAccount,
   clearAllAccounts,
@@ -843,6 +847,11 @@ export function registerIpcHandlers(context: IpcContext): void {
     return result;
   });
   ipcMain.handle("agent-sync-status", () => getAgentSyncStatus());
+  // The cloud agent id a profile is currently linked to (null when unlinked),
+  // for the per-profile Sync tab.
+  ipcMain.handle("agent-sync-linked-id", (_event, profile: string) =>
+    getLinkedAgentId(profile),
+  );
 
   // Configuration (profile-aware)
   ipcMain.handle("get-locale", () => getAppLocale());
