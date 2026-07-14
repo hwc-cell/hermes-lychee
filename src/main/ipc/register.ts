@@ -558,6 +558,14 @@ async function withRemoteDashboard<T>(
   dashboardOperation: () => Promise<T>,
   legacyOperation: () => Promise<T> | T,
 ): Promise<T> {
+  if (conn.remoteAuthMode === "oauth") {
+    if (conn.remoteChatTransport === "legacy") {
+      throw new Error(
+        "Legacy remote transport cannot authenticate to an OAuth gateway.",
+      );
+    }
+    return dashboardOperation();
+  }
   if (conn.remoteChatTransport === "legacy") return legacyOperation();
   try {
     return await dashboardOperation();
@@ -1253,9 +1261,19 @@ export function registerIpcHandlers(context: IpcContext): void {
     (_event, url: string, apiKey?: string) => testRemoteConnection(url, apiKey),
   );
 
-  ipcMain.handle("probe-remote-auth-mode", (_event, url: string) =>
-    probeRemoteAuthMode(url),
-  );
+  ipcMain.handle("probe-remote-auth-mode", async (_event, url: string) => {
+    const result = await probeRemoteAuthMode(url);
+    const conn = getConnectionConfig();
+    if (
+      conn.mode === "remote" &&
+      conn.remoteUrl.trim() === url.trim() &&
+      conn.remoteAuthMode !== result.authMode
+    ) {
+      setConnectionConfig({ ...conn, remoteAuthMode: result.authMode });
+      notifyConnectionConfigChanged();
+    }
+    return result;
+  });
 
   ipcMain.handle("remote-oauth-login", async () => {
     const conn = getConnectionConfig();
