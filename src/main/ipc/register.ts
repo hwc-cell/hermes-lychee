@@ -123,6 +123,12 @@ import {
   stopDashboard,
 } from "../dashboard";
 import {
+  clearRemoteOAuthSession,
+  openRemoteOAuthLogin,
+  probeRemoteAuthMode,
+  remoteOAuthSessionState,
+} from "../remote-oauth";
+import {
   startSshTunnel,
   ensureSshTunnel,
   getSshTunnelUrl,
@@ -1188,6 +1194,8 @@ export function registerIpcHandlers(context: IpcContext): void {
         ...existing,
         mode,
         remoteUrl,
+        remoteAuthMode:
+          existing.remoteUrl === remoteUrl ? existing.remoteAuthMode : "auto",
         apiKey: resolveConnectionApiKeyUpdate(
           existing,
           mode,
@@ -1243,6 +1251,41 @@ export function registerIpcHandlers(context: IpcContext): void {
     "test-remote-connection",
     (_event, url: string, apiKey?: string) => testRemoteConnection(url, apiKey),
   );
+
+  ipcMain.handle("probe-remote-auth-mode", (_event, url: string) =>
+    probeRemoteAuthMode(url),
+  );
+
+  ipcMain.handle("remote-oauth-login", async () => {
+    const conn = getConnectionConfig();
+    if (conn.mode !== "remote" || !conn.remoteUrl.trim()) {
+      throw new Error("Configure a Remote gateway URL before signing in.");
+    }
+    const result = await openRemoteOAuthLogin(
+      conn.remoteUrl,
+      context.getMainWindow(),
+    );
+    setConnectionConfig({ ...conn, remoteAuthMode: "oauth" });
+    notifyConnectionConfigChanged();
+    return result;
+  });
+
+  ipcMain.handle("remote-oauth-logout", async () => {
+    const conn = getConnectionConfig();
+    if (conn.mode !== "remote" || !conn.remoteUrl.trim()) {
+      throw new Error("Remote gateway is not configured.");
+    }
+    await clearRemoteOAuthSession(conn.remoteUrl);
+    return { signedIn: false };
+  });
+
+  ipcMain.handle("remote-oauth-session-state", () => {
+    const conn = getConnectionConfig();
+    if (conn.mode !== "remote" || !conn.remoteUrl.trim()) {
+      return { signedIn: false };
+    }
+    return remoteOAuthSessionState(conn.remoteUrl);
+  });
 
   ipcMain.handle(
     "test-ssh-connection",

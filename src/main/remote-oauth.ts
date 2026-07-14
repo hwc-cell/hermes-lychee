@@ -80,6 +80,47 @@ export async function remoteOAuthSessionState(
   return { signedIn: cookiesHaveRemoteOAuthSession(cookies) };
 }
 
+export async function probeRemoteAuthMode(
+  baseUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ authMode: "token" | "oauth"; version: string | null }> {
+  const normalized = normalizeRemoteOAuthBaseUrl(baseUrl);
+  const statusUrl = new URL("/api/status", normalized.origin).toString();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  timer.unref?.();
+  try {
+    const response = await fetchImpl(statusUrl, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new RemoteOAuthError(
+        `Remote gateway status probe failed (${response.status}).`,
+        "oauth_request_failed",
+        response.status,
+      );
+    }
+    let status: { auth_required?: unknown; version?: unknown };
+    try {
+      status = (await response.json()) as typeof status;
+    } catch (error) {
+      throw new RemoteOAuthError(
+        "Remote gateway returned an invalid /api/status response.",
+        "oauth_request_failed",
+        response.status,
+        { cause: error },
+      );
+    }
+    return {
+      authMode: status.auth_required === true ? "oauth" : "token",
+      version: typeof status.version === "string" ? status.version : null,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function clearRemoteOAuthSession(baseUrl: string): Promise<void> {
   const normalized = normalizeRemoteOAuthBaseUrl(baseUrl);
   const oauthSession = getRemoteOAuthSession();

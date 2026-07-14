@@ -310,6 +310,7 @@ const hermesAPI = {
   getConnectionConfig: (): Promise<{
     mode: "local" | "remote" | "ssh";
     remoteUrl: string;
+    remoteAuthMode: "auto" | "token" | "oauth";
     remoteChatTransport: "auto" | "dashboard" | "legacy";
     sshChatTransport: "auto" | "dashboard" | "legacy";
     hasApiKey: boolean;
@@ -345,6 +346,7 @@ const hermesAPI = {
     callback: (config: {
       mode: "local" | "remote" | "ssh";
       remoteUrl: string;
+      remoteAuthMode: "auto" | "token" | "oauth";
       remoteChatTransport: "auto" | "dashboard" | "legacy";
       sshChatTransport: "auto" | "dashboard" | "legacy";
       hasApiKey: boolean;
@@ -367,6 +369,7 @@ const hermesAPI = {
         config as {
           mode: "local" | "remote" | "ssh";
           remoteUrl: string;
+          remoteAuthMode: "auto" | "token" | "oauth";
           remoteChatTransport: "auto" | "dashboard" | "legacy";
           sshChatTransport: "auto" | "dashboard" | "legacy";
           hasApiKey: boolean;
@@ -406,6 +409,20 @@ const hermesAPI = {
 
   testRemoteConnection: (url: string, apiKey?: string): Promise<boolean> =>
     ipcRenderer.invoke("test-remote-connection", url, apiKey),
+
+  probeRemoteAuthMode: (
+    url: string,
+  ): Promise<{ authMode: "token" | "oauth"; version: string | null }> =>
+    ipcRenderer.invoke("probe-remote-auth-mode", url),
+
+  remoteOAuthLogin: (): Promise<{ signedIn: true }> =>
+    ipcRenderer.invoke("remote-oauth-login"),
+
+  remoteOAuthLogout: (): Promise<{ signedIn: false }> =>
+    ipcRenderer.invoke("remote-oauth-logout"),
+
+  remoteOAuthSessionState: (): Promise<{ signedIn: boolean }> =>
+    ipcRenderer.invoke("remote-oauth-session-state"),
 
   testSshConnection: (
     host: string,

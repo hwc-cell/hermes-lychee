@@ -48,6 +48,7 @@ describe("connection config secret exposure", () => {
       apiKey: "remote-secret",
       remoteChatTransport: "dashboard",
       sshChatTransport: "auto",
+      remoteAuthMode: "auto",
       ssh: getConnectionConfig().ssh,
     });
 
@@ -59,6 +60,7 @@ describe("connection config secret exposure", () => {
       remoteUrl: "https://hermes.example",
       remoteChatTransport: "dashboard",
       sshChatTransport: "auto",
+      remoteAuthMode: "auto",
       hasApiKey: true,
       // Length is intentionally exposed so the renderer can render a
       // mask that matches the stored key's width. The secret itself

@@ -338,6 +338,7 @@ interface HermesAPI {
   getConnectionConfig: () => Promise<{
     mode: "local" | "remote" | "ssh";
     remoteUrl: string;
+    remoteAuthMode: "auto" | "token" | "oauth";
     remoteChatTransport: "auto" | "dashboard" | "legacy";
     sshChatTransport: "auto" | "dashboard" | "legacy";
     hasApiKey: boolean;
@@ -364,6 +365,7 @@ interface HermesAPI {
     callback: (config: {
       mode: "local" | "remote" | "ssh";
       remoteUrl: string;
+      remoteAuthMode: "auto" | "token" | "oauth";
       remoteChatTransport: "auto" | "dashboard" | "legacy";
       sshChatTransport: "auto" | "dashboard" | "legacy";
       hasApiKey: boolean;
@@ -387,6 +389,12 @@ interface HermesAPI {
     localPort: number,
   ) => Promise<boolean>;
   testRemoteConnection: (url: string, apiKey?: string) => Promise<boolean>;
+  probeRemoteAuthMode: (
+    url: string,
+  ) => Promise<{ authMode: "token" | "oauth"; version: string | null }>;
+  remoteOAuthLogin: () => Promise<{ signedIn: true }>;
+  remoteOAuthLogout: () => Promise<{ signedIn: false }>;
+  remoteOAuthSessionState: () => Promise<{ signedIn: boolean }>;
   testSshConnection: (
     host: string,
     port: number,

@@ -17,6 +17,7 @@ vi.mock("./config", () => ({
     mode: "local",
     remoteUrl: "",
     apiKey: "",
+    remoteAuthMode: "auto",
     ssh: {},
   })),
   getConfigValue: vi.fn(() => null),
@@ -79,6 +80,7 @@ function testConnection(
     mode: "local",
     remoteUrl: "",
     apiKey: "",
+    remoteAuthMode: "auto",
     remoteChatTransport: "auto",
     sshChatTransport: "auto",
     ssh: {
