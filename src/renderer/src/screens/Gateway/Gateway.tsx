@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useI18n } from "../../components/useI18n";
+import { useWindowFocused } from "../../hooks/useWindowFocused";
 import BrandLogo from "../../components/common/BrandLogo";
 import type {
   MessagingEnvVarInfo,
@@ -85,6 +86,7 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
   );
   const [generatingKey, setGeneratingKey] = useState(false);
   const [envVars, setEnvVars] = useState<Record<string, string> | null>(null);
+  const focused = useWindowFocused();
   const gatewayStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -121,11 +123,12 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
   }, [loadConfig]);
 
   useEffect(() => {
+    if (!focused) return;
     const interval = setInterval(() => {
       void loadConfig();
     }, 10000);
     return () => clearInterval(interval);
-  }, [loadConfig]);
+  }, [loadConfig, focused]);
 
   useEffect(() => {
     let cancelled = false;

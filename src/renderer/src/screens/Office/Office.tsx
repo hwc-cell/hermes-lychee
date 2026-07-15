@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Crown, MonitorOff, Move, RefreshCw, Users, X } from "lucide-react";
 import type { GpuStatus } from "../../../../shared/gpu";
 import { useI18n } from "../../components/useI18n";
+import { useWindowFocused } from "../../hooks/useWindowFocused";
 import oneChatIcon from "../../assets/images/one-chat.svg";
 import OneChatModal from "./OneChatModal";
 import Office3D from "./office3d/Office3D";
@@ -126,13 +127,15 @@ function Office({ visible }: OfficeProps): React.JSX.Element {
     }
   }, []);
 
+  const focused = useWindowFocused();
+
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !focused) return;
     const interval = window.setInterval(() => {
       void refreshAgentStatuses();
     }, 4000);
     return () => window.clearInterval(interval);
-  }, [visible, refreshAgentStatuses]);
+  }, [visible, focused, refreshAgentStatuses]);
 
   // The initial fetch is driven solely by the visible-guard effect above
   // (gated on `!loadedOnce.current`). A second unconditional mount effect used

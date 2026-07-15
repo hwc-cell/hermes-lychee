@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "../../assets/icons";
 import { useI18n } from "../../components/useI18n";
+import { useWindowFocused } from "../../hooks/useWindowFocused";
 
 interface KanbanProps {
   profile?: string;
@@ -227,6 +228,7 @@ function ageLabel(createdAt: number | null): string {
 function Kanban({ profile, visible }: KanbanProps): React.JSX.Element {
   const { t } = useI18n();
   const [boards, setBoards] = useState<KanbanBoard[]>([]);
+  const focused = useWindowFocused();
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -399,10 +401,10 @@ function Kanban({ profile, visible }: KanbanProps): React.JSX.Element {
   // to kanban.db out-of-band, so we need to refresh to surface state moves
   // (e.g. ready → running once a worker claims a task).
   useEffect(() => {
-    if (visible === false) return;
+    if (visible === false || !focused) return;
     const id = setInterval(() => loadAll(true), POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [loadAll, visible]);
+  }, [loadAll, visible, focused]);
 
   useEffect(() => {
     if (!detailTaskId) {
