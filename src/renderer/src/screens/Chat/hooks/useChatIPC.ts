@@ -174,6 +174,7 @@ export function useChatIPC({
   activeTurnRef,
 }: UseChatIPCArgs): void {
   const reasoningSegmentClosedRef = useRef(false);
+  const doneRef = useRef(false); // 完成后忽略延迟到达的stream chunk
   const dbPollRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
   const dbPollInFlightRef = useRef(false);
   const acceptedSessionIdRef = useRef<string | null>(sessionScopeId);
@@ -201,6 +202,7 @@ export function useChatIPC({
     if (sessionScopeId === acceptedSessionIdRef.current) return;
     acceptedSessionIdRef.current = sessionScopeId;
     reasoningSegmentClosedRef.current = false;
+    doneRef.current = false; // 新会话重置
     stopDbPolling();
   }, [sessionScopeId, stopDbPolling]);
 
@@ -260,12 +262,14 @@ export function useChatIPC({
 
     const cleanupChunk = window.hermesAPI.onChatChunk((eventRunId, chunk) => {
       if (!eventMatchesRun(eventRunId, runId)) return;
+      if (doneRef.current) return; // 已在完成阶段，忽略后续chunk避免重复
       batcherRef.current?.push(chunk);
     });
 
     const cleanupReasoning = window.hermesAPI.onChatReasoningChunk(
       (eventRunId, chunk) => {
         if (!eventMatchesRun(eventRunId, runId)) return;
+        if (doneRef.current) return;
         if (!activeTurnRef.current) return;
         if (!chunk) return;
         const forceNewSegment = reasoningSegmentClosedRef.current;
@@ -279,6 +283,7 @@ export function useChatIPC({
     const cleanupDone = window.hermesAPI.onChatDone(
       async (eventRunId, sessionId) => {
         if (!eventMatchesRun(eventRunId, runId)) return;
+        doneRef.current = true; // 阻止后续chunk再追加
         batcherRef.current?.flushImmediate();
         reasoningSegmentClosedRef.current = false;
         stopDbPolling();
