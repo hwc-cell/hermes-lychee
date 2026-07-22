@@ -208,6 +208,18 @@ function parseCommandDispatch(raw: unknown): CommandDispatchResponse | null {
         ? { type: "send", message: r.message }
         : null;
     default:
+      // Accept any response type the backend might return (e.g. /undo
+      // returns type="agent" or custom types). Fall back to type="exec"
+      // if there's output text, so the user sees the result instead of
+      // "invalid response: command.dispatch".
+      if (str(r.output)) return { type: "exec", output: str(r.output) };
+      if (typeof r.output === "object" && r.output !== null) {
+        const inner = r.output as Record<string, unknown>;
+        if (typeof inner.content === "string")
+          return { type: "exec", output: inner.content };
+        if (typeof inner.message === "string")
+          return { type: "exec", output: inner.message };
+      }
       return null;
   }
 }

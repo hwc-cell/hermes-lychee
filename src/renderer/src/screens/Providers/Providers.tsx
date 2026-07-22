@@ -349,13 +349,16 @@ function Providers({
       setModelProvider(id);
       setModelBaseUrl("");
     }
-    // 自动填充高级选项默认值
+    // 切服务商时自动填充默认模型名和上下文窗口，防止旧模型名+新baseUrl写入models.json(#857)
     const kit = PROVIDERS.setup.find((p) => p.id === id);
+    if (kit?.defaultModel) setModelName(kit.defaultModel);
+    else setModelName("");
     if (kit?.defaultContext) {
       defaultContext.current = kit.defaultContext;
-      if (!contextLength) setContextLength(String(kit.defaultContext));
+      setContextLength(String(kit.defaultContext));
     } else {
       defaultContext.current = 0;
+      setContextLength("");
     }
   }
 

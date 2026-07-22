@@ -50,5 +50,20 @@ export function useChatScroll(messages: ChatMessage[]): {
     }
   }, [messages, scrollToBottom]);
 
+  // During streaming, the last message bubble grows taller without the
+  // messages array changing. Observe container size changes and keep the
+  // view pinned to the bottom while the user hasn't manually scrolled up.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      if (!userScrolledUpRef.current) {
+        bottomRef.current?.scrollIntoView({ behavior: "instant" });
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   return { containerRef, bottomRef };
 }
