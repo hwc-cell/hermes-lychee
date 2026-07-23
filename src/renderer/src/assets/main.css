@@ -515,8 +515,8 @@
   font-style: normal;
   font-display: swap;
   /* Scope Cairo to Arabic glyphs only; Latin etc. falls through to Manrope */
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
-    U+FB50-FDFF, U+FE70-FEFF;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 @font-face {
   font-family: "Cairo";
@@ -524,8 +524,8 @@
   font-weight: 500;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
-    U+FB50-FDFF, U+FE70-FEFF;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 @font-face {
   font-family: "Cairo";
@@ -533,8 +533,8 @@
   font-weight: 600;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
-    U+FB50-FDFF, U+FE70-FEFF;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 @font-face {
   font-family: "Cairo";
@@ -542,8 +542,17 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
-    U+FB50-FDFF, U+FE70-FEFF;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* ----- Space Grotesk (numeric / money display) ----- */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./fonts/SpaceGrotesk-Variable.ttf") format("truetype");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* ----- Shared Tokens ----- */
@@ -554,9 +563,12 @@
   --radius-xl: 20px;
   --transition: 150ms ease;
   --font-sans:
-    "Cairo", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "Cairo", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
   --font-mono:
     "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  /* Amounts and money figures (bank teller totals, token balances). */
+  --font-numeric: "Space Grotesk", var(--font-sans);
 }
 
 /* ----- Squared corners (radius toggle off) ----- */
@@ -622,9 +634,38 @@ html {
   background: var(--bg-primary);
 }
 
+/* ── Translucent sidebar (macOS vibrancy) ──
+   On the main screen the shell goes transparent so the window material shows
+   through the sidebar as frosted glass. The material's tone tracks the theme
+   (see ThemeProvider → nativeTheme.themeSource), so a dark theme gets a dark
+   frost, never a milky light one. Only the sidebar is translucent — the content
+   pane stays opaque and readable. Gated to mac + main screen in App.tsx, so
+   onboarding and other platforms are untouched. */
+body:has(.shell-vibrant),
+#root:has(.shell-vibrant) {
+  background: transparent;
+}
+.app.shell-vibrant {
+  background: transparent;
+}
+.app.shell-vibrant .content {
+  background: var(--bg-primary);
+  /* Transparent window → macOS no longer masks the opaque content to the
+     window shape, so round the top-right corner ourselves (the sidebar owns
+     top-left, the status bar owns the bottom). `.content` is overflow:hidden,
+     so the tab strip clips to it. */
+  border-radius: 0 16px 0 0;
+}
+.app.shell-vibrant .sidebar {
+  background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+}
+.app.shell-vibrant .status-bar {
+  background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+}
+
 .drag-region {
   -webkit-app-region: drag;
-  height: 28px;
+  height: 34px;
   width: 100%;
   position: fixed;
   top: 0;
@@ -749,15 +790,6 @@ html {
 /* ----- Loading ----- */
 .loading-screen {
   background: var(--bg-primary);
-}
-
-.loading-spinner {
-  width: 28px;
-  height: 28px;
-  border: 2.5px solid var(--border-bright);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -1317,6 +1349,12 @@ html {
   justify-content: space-between;
   gap: 8px;
 }
+.settings-section-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
 /* Read-only provider summary shown when a provider is configured and the grid
    is collapsed. */
@@ -1325,8 +1363,8 @@ html {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border: none;
   border-radius: var(--radius-md);
 }
 
@@ -1481,10 +1519,85 @@ html {
 /* ========================================================================
    LAYOUT (Sidebar + Content)
    ======================================================================== */
+/* Column wrapper: the sidebar+content row on top, the status strip pinned
+   full-width beneath it. */
+.layout-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .layout {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
+}
+
+/* ── Bottom system status strip ──
+   Native desktop affordance: gateway/connection state, active model, and skill
+   count that were otherwise hidden, plus real keyboard hints. */
+.status-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 26px;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  /* Full-width footer owns the window's bottom edge → round both bottom
+     corners to follow the window. */
+  border-radius: 0 0 16px 16px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.status-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.status-bar-hints {
+  flex-shrink: 0;
+}
+.status-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-strong {
+  color: var(--text-secondary);
+}
+.status-sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.online {
+  background: var(--success, #3fb950);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--success, #3fb950) 22%, transparent);
+}
+.status-dot.offline {
+  background: var(--text-muted);
+}
+.status-kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-secondary);
 }
 
 .sidebar {
@@ -1500,9 +1613,10 @@ html {
   transition:
     width var(--transition),
     padding var(--transition);
-  /* Flush full-height panel: square right edge against the content, left
-     corners kept rounded to follow the window's rounded corners. */
-  border-radius: 16px 0 0 16px;
+  /* Flush full-height panel. Only the top-left corner follows the window now —
+     the full-width status bar owns the window's bottom edge, so the sidebar's
+     bottom-left is square against it. */
+  border-radius: 16px 0 0 0;
 }
 
 /* macOS: sidebar vibrancy with subtle blur */
@@ -1529,10 +1643,12 @@ html {
 .sidebar-brand {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* Logo removed for a clean top — just the collapse toggle, parked top-right
+     opposite the traffic lights. */
+  justify-content: flex-end;
   gap: 10px;
-  padding: 20px 14px 20px 20px;
-  margin-top: 25px;
+  padding: 4px 12px 2px;
+  margin-top: 12px;
 }
 
 .sidebar-logo {
@@ -2076,11 +2192,17 @@ html {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  padding: 4px;
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  /* Light-based, stroke-free: depth from a frosted material, a top inset
+     highlight, and layered ambient shadow — no hard 1px border. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -18px rgba(0, 0, 0, 0.55),
+    0 8px 24px -14px rgba(0, 0, 0, 0.4);
   font-family: var(--font-sans);
   /* Open animation scales from the anchored top-left corner. */
   transform-origin: top left;
@@ -2112,9 +2234,9 @@ html {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 10px;
   border: none;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-primary);
   cursor: pointer;
@@ -2124,6 +2246,16 @@ html {
   transition:
     background var(--transition),
     color var(--transition);
+}
+
+/* Active "Move to project" location: a soft accent fill, not a stroke. */
+.sidebar-session-menu-item.active-project {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.sidebar-session-menu-item.active-project svg {
+  color: var(--accent-text);
 }
 
 .sidebar-session-menu-item svg {
@@ -2158,8 +2290,9 @@ html {
 
 .sidebar-session-menu-divider {
   height: 1px;
-  margin: 4px 6px;
-  background: var(--border-bright);
+  margin: 5px 8px;
+  /* Soft hairline instead of a hard stroke. */
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
 }
 
 .sidebar-session-menu-back {
@@ -2402,11 +2535,10 @@ html {
   line-height: 1;
 }
 
-.active-session-chip-spinner {
-  flex-shrink: 0;
-  /* Sits on the profile's colour-filled avatar circle. */
-  color: #fff;
-  animation: spin 0.8s linear infinite;
+/* Loading chips render a transparent, theme-aware thinking orb in the
+   avatar slot instead of the colour-filled circle, so no background here. */
+.active-session-chip-orb {
+  background: none;
 }
 
 .active-session-chip-title {
@@ -2596,17 +2728,149 @@ html {
 .profile-switcher {
   position: relative;
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .profile-switcher.compact {
   width: 40px;
 }
 
+.profile-switch-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.profile-switch-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Modal to switch the active profile. */
+.profile-switch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+  animation: profileSwitchOverlayIn 0.14s ease;
+}
+.profile-switch-modal {
+  width: 480px;
+  max-width: 100%;
+  /* Fixed size: the panel stays the same dimensions whatever the search
+     filters down to — the list scrolls/leaves empty space rather than the
+     modal resizing. Caps to the viewport on short screens. */
+  height: 560px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Light-based, stroke-free: no outer border — depth comes from the frosted
+     material, a top inset highlight, and layered ambient shadow. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  animation: profileSwitchModalIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Command-palette search header: icon + filter input + the ⌘P/Ctrl+P hint.
+   Separated from the list by a soft light hairline, not a hard stroke. */
+.profile-switch-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-primary) 7%, transparent);
+}
+.profile-switch-search-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.profile-switch-search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: var(--font-sans);
+}
+.profile-switch-search-input::placeholder {
+  color: var(--text-muted);
+}
+.profile-switch-kbd {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.profile-switch-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+.profile-switch-group {
+  padding: 12px 12px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.profile-switch-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+@keyframes profileSwitchOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes profileSwitchModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .profile-switcher-trigger {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   background: none;
   border: 1px solid transparent;
@@ -2758,11 +3022,12 @@ html {
 }
 
 .profile-menu-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 160px) 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px 12px;
   background: none;
   border: none;
   border-radius: var(--radius-md);
@@ -2772,27 +3037,20 @@ html {
   transition: background var(--transition);
 }
 
-.profile-menu-item:hover {
+/* Pointer hover and keyboard highlight share one resting tint; the active
+   profile keeps its accent fill and wins when it is also highlighted. */
+.profile-menu-item:hover,
+.profile-menu-item.highlighted {
   background: var(--bg-tertiary);
 }
 
-.profile-menu-item.active {
+.profile-menu-item.active,
+.profile-menu-item.active.highlighted {
   background: var(--accent-subtle);
 }
 
-.profile-menu-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
 .profile-menu-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -2806,9 +3064,24 @@ html {
   color: var(--text-muted);
 }
 
+.profile-menu-model {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-menu-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .profile-menu-gateway {
   flex-shrink: 0;
-  margin-left: auto;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -2837,14 +3110,12 @@ html {
 .profile-menu-manage {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  margin-top: 6px;
-  padding: 9px 10px;
+  padding: 13px 16px;
   background: none;
   border: none;
-  border-top: 1px solid var(--border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 7%, transparent);
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
@@ -2951,6 +3222,9 @@ html {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Hairline seam so the content pane reads as a distinct material layer above
+     the (darker / translucent) sidebar rather than one flat black field. */
+  border-inline-start: 1px solid var(--border);
 }
 
 /* ========================================================================
@@ -3787,42 +4061,93 @@ html {
 .chat-fast-active {
   opacity: 1;
   color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
 }
 
 .chat-fast-active:hover {
   opacity: 1;
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
 }
 
 .chat-fast-popover {
-  display: none;
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   right: 0;
   z-index: 100;
-  width: 220px;
-  padding: 10px 12px;
-  background: var(--bg-tertiary, var(--bg-secondary));
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  width: 244px;
+  padding: 12px 14px;
+  /* Same floating glass material as the pickers. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  /* Fade + settle instead of a hard show/hide. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px) scale(0.98);
+  transform-origin: bottom right;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.16s;
   pointer-events: none;
 }
 
-.chat-fast-popover strong {
+.chat-fast-popover-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.chat-fast-popover-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  /* Off state: a quiet neutral chip so the bolt reads clearly. */
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+/* Block removes the inline-SVG baseline gap that otherwise makes the bolt sit
+   low; the lucide Zap glyph is centred in its own viewBox. */
+.chat-fast-popover-icon svg {
   display: block;
+}
+/* On state: a solid amber badge with a dark glyph — high contrast, and it
+   signals "active" the way the toggle button does. */
+.chat-fast-active-popover .chat-fast-popover-icon {
+  color: #3a2900;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #f59e0b 20%, transparent);
+}
+
+.chat-fast-popover strong {
   font-size: 12px;
-  margin-bottom: 4px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .chat-fast-popover span {
+  display: block;
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 
-.chat-fast-wrapper:hover .chat-fast-popover {
-  display: block;
+.chat-fast-wrapper:hover .chat-fast-popover,
+.chat-fast-wrapper:focus-within .chat-fast-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
 }
 
 /* Context folder control (issue #27) */
@@ -3957,18 +4282,21 @@ html {
 .chat-suggestion {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--bg-secondary);
+  gap: 8px;
+  padding: 8px 14px;
+  /* Quiet fill, not an outlined pill: a hairline ring (inset) and native
+     rounded-rect radius read as a desktop control rather than a web chip. */
+  border-radius: var(--radius-md);
+  border: none;
+  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+  box-shadow: inset 0 0 0 1px var(--border);
   color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition:
     background 0.15s ease,
     color 0.15s ease,
-    border-color 0.15s ease;
+    box-shadow 0.15s ease;
 }
 
 .chat-suggestion svg {
@@ -3976,9 +4304,9 @@ html {
 }
 
 .chat-suggestion:hover {
-  background: var(--bg-elevated);
+  background: var(--bg-hover);
   color: var(--text-primary);
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--border-bright);
 }
 
 /* Messages */
@@ -4045,6 +4373,20 @@ html {
 .chat-avatar-agent {
   border-radius: 50px;
   overflow: hidden;
+}
+
+/* While loading, the avatar holds a monochrome thinking orb whose ink can wash
+   out against the near-black page. Back it with an *inverted* circle — light on
+   dark themes, dark on light themes (--text-primary) — and flip the orb ink to
+   match (the `invert` prop on OrbLoader) so it always reads as a dark orb on a
+   white disc (dark theme) or a light orb on a dark disc (light theme). Inset
+   the orb a touch so its dots sit inside the circle rather than clipping. */
+.chat-avatar-orb {
+  background: var(--text-primary);
+}
+
+.chat-avatar-orb canvas {
+  transform: scale(0.82);
 }
 
 .chat-avatar-agent img {
@@ -4732,11 +5074,15 @@ html {
   border: 1px solid var(--border-bright);
   border-radius: var(--radius-lg);
   padding: 10px 10px 8px;
-  transition: border-color var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .chat-input-wrapper:focus-within {
-  border-color: var(--border-focus);
+  /* Soft accent glow on focus instead of a saturated electric-blue stroke. */
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-bright));
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .chat-input {
@@ -6228,21 +6574,44 @@ html {
   white-space: nowrap;
 }
 
+/* Native popovers never just appear — a quick fade + settle from below. */
+@keyframes modelPickerIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .chat-model-dropdown {
   position: absolute;
   bottom: 100%;
   inset-inline-start: 0;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   width: 320px;
   max-height: 360px;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  /* Translucent glass: the chat behind blurs through, reading as a floating
+     material rather than a flat web panel. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  /* Depth comes from light, not strokes: one soft ambient shadow lifts the
+     panel, a hairline + top highlight catch the edge. */
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
   z-index: 100;
   padding: 6px;
+  transform-origin: bottom left;
+  animation: modelPickerIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Reasoning effort picker */
@@ -6283,14 +6652,21 @@ html {
   position: absolute;
   bottom: 100%;
   inset-inline-start: 0;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   width: 280px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
   z-index: 100;
   padding: 6px;
+  transform-origin: bottom left;
+  animation: modelPickerIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .chat-reasoning-header {
@@ -6369,6 +6745,144 @@ html {
   flex-shrink: 0;
 }
 
+/* ── Reasoning effort as a Faster⟷Smarter segmented slider ──
+   A tactile dot-rail (knob on the current level) instead of a plain option
+   list — reads as a native macOS control. Lives inside the glass dropdown. */
+.chat-effort {
+  width: 240px;
+  padding: 10px 12px 12px;
+}
+.chat-effort-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.chat-effort-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.chat-effort-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.chat-effort-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.chat-effort-help {
+  display: inline-flex;
+  color: var(--text-muted);
+  cursor: help;
+  flex-shrink: 0;
+  transition: color var(--transition);
+  border-radius: 50%;
+  outline: none;
+}
+.chat-effort-help:hover,
+.chat-effort-help:focus-visible {
+  color: var(--text-secondary);
+}
+.chat-effort-help:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+.chat-effort-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 18px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  touch-action: none;
+  border-radius: 6px;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.chat-effort-track:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+/* Rail spans between the first and last dot centres (each stop is 18px wide, so
+   its centre sits 9px in from the edge). */
+.chat-effort-rail {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  height: 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+}
+.chat-effort-rail-fill {
+  position: absolute;
+  left: 9px;
+  height: 3px;
+  border-radius: 3px;
+  width: calc((100% - 18px) * var(--effort-frac, 0));
+  background: color-mix(in srgb, var(--accent-text) 55%, transparent);
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chat-effort-stop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.chat-effort-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.55;
+  transition:
+    width 0.15s ease,
+    height 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.chat-effort-stop:hover .chat-effort-dot {
+  opacity: 1;
+}
+.chat-effort-stop.passed .chat-effort-dot {
+  background: var(--accent-text);
+  opacity: 1;
+}
+/* Apex (Smarter end) always carries a hint of accent, like a target. */
+.chat-effort-stop.apex .chat-effort-dot {
+  background: var(--accent-text);
+  opacity: 0.9;
+}
+/* The knob on the current level. */
+.chat-effort-stop.active .chat-effort-dot {
+  width: 14px;
+  height: 14px;
+  background: var(--text-primary);
+  opacity: 1;
+  cursor: grab;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.45),
+    0 0 0 4px var(--accent-subtle);
+}
+.chat-effort-ends {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 .chat-model-search-input,
 .chat-model-custom-input {
   box-sizing: border-box;
@@ -6379,12 +6893,19 @@ html {
 }
 
 .chat-model-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 6px 8px 4px;
+}
+.chat-model-group-label .brand-logo {
+  opacity: 0.75;
+  flex-shrink: 0;
 }
 
 .chat-model-option {
@@ -6432,17 +6953,28 @@ html {
 .chat-model-search-input,
 .chat-model-custom-input {
   width: 100%;
-  padding: 5px 8px;
+  padding: 7px 10px;
   font-size: 12px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  /* Recessed field: sits below the surface via an inner shadow, no visible
+     stroke at rest — depth inward reads as native, not as a web form. */
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 90%, #000);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+  transition:
+    box-shadow var(--transition),
+    border-color var(--transition);
 }
 
 .chat-model-search-input:focus,
 .chat-model-custom-input:focus {
   outline: none;
-  border-color: var(--border-focus);
+  /* A whisper of accent — a soft glow, never a saturated 2px stroke. */
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.28),
+    0 0 0 3px var(--accent-subtle);
 }
 
 .chat-model-custom-input {
@@ -6452,7 +6984,208 @@ html {
 .chat-model-search-input {
   position: sticky;
   top: 0;
-  background: var(--bg-secondary);
+}
+
+/* ── Two-pane model picker (provider rail + model list) ── */
+.chat-model-dropdown-wide {
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: 440px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chat-model-search-wrap {
+  position: relative;
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.chat-model-search-icon {
+  position: absolute;
+  inset-inline-start: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.chat-model-dropdown-wide .chat-model-search-input {
+  position: static;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  padding-inline-start: 34px;
+}
+.chat-model-panes {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.chat-model-rail {
+  width: 172px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-inline-end: 6px;
+  border-inline-end: 1px solid var(--border);
+}
+.chat-model-rail-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-model-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  text-align: start;
+  transition: background var(--transition);
+}
+.chat-model-rail-item:hover {
+  background: var(--bg-hover);
+}
+.chat-model-rail-item.active {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.chat-model-rail-item .brand-logo {
+  flex-shrink: 0;
+}
+.chat-model-rail-all-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.chat-model-rail-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-model-rail-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.chat-model-list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+.chat-model-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  text-align: start;
+  transition: background var(--transition);
+}
+.chat-model-row:hover {
+  background: var(--bg-hover);
+}
+.chat-model-row.active,
+.chat-model-row.active:hover {
+  /* Selection reads as a soft filled tint — the affordance is the fill (and the
+     check), never an outlined box. */
+  background: var(--accent-subtle);
+}
+.chat-model-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.chat-model-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-model-row-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-model-row-check {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.chat-model-list-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.chat-model-configure {
+  flex-shrink: 0;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+.chat-model-configure:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Auto-hide the pane scrollbars: the thumb is transparent at rest and fades in
+   while the pointer is over the pane (i.e. when the user is scrolling it), so no
+   persistent bar sits in the picker. The 6px gutter is already reserved by the
+   global rule, so revealing the thumb causes no layout shift. */
+.chat-model-list::-webkit-scrollbar-thumb,
+.chat-model-rail-list::-webkit-scrollbar-thumb {
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.chat-model-list:hover::-webkit-scrollbar-thumb,
+.chat-model-rail-list:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+.chat-model-list::-webkit-scrollbar-thumb:hover,
+.chat-model-rail-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
 }
 
 /* ========================================================================
@@ -6472,9 +7205,10 @@ html {
 }
 
 .settings-section {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  /* Light-based: a lifted translucent panel instead of a bordered box. */
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  border: none;
+  border-radius: var(--radius-lg);
   padding: 20px;
   margin-bottom: 16px;
 }
@@ -6486,6 +7220,112 @@ html {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   margin-bottom: 16px;
+}
+
+/* Compact API-key list: one row per tool (name + description on the left; a
+   masked key + reveal, or an "Add key" action, on the right) instead of a
+   full input field each. */
+.settings-key-list {
+  display: flex;
+  flex-direction: column;
+}
+.settings-key-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 40px;
+  padding: 8px 4px;
+}
+.settings-key-row + .settings-key-row {
+  border-top: 1px solid var(--border);
+}
+.settings-key-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.settings-key-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.settings-key-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-key-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.settings-key-masked {
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.settings-key-masked:hover {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.settings-key-eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+.settings-key-eye:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.settings-key-add {
+  border: none;
+  background: none;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-text, var(--accent));
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.settings-key-add:hover {
+  background: color-mix(in srgb, var(--accent, #4c8dff) 14%, transparent);
+}
+.settings-key-input {
+  width: min(280px, 42vw);
+}
+
+/* Secondary buttons inside sections go light-based — a lifted fill, no stroke. */
+.settings-section .btn-secondary {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.settings-section .btn-secondary:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
 }
 
 .settings-field {
@@ -6548,6 +7388,47 @@ html {
 
 .settings-transport-status--warn span:first-child {
   color: var(--warning, #f59e0b);
+}
+
+.ssh-docker-container-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ssh-docker-container-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  cursor: pointer;
+}
+
+.ssh-docker-container-option input {
+  margin-top: 3px;
+}
+
+.ssh-docker-container-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ssh-docker-container-name {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.ssh-docker-container-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
 }
 
 .settings-input-row {
@@ -6629,8 +7510,8 @@ html {
 }
 
 .provider-key-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border: none;
   border-radius: var(--radius-md);
   padding: 14px;
   display: flex;
@@ -6664,6 +7545,632 @@ html {
   color: var(--text-muted);
 }
 
+/* Configured-provider card (clickable → config modal) + Add tile */
+.provider-config-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.provider-config-card:hover {
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+.provider-config-card-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.provider-config-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.provider-config-card-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-config-card-edit {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.provider-add-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.provider-add-card:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+/* Add-provider picker modal */
+.provider-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+.provider-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  /* Fixed scroll region so the modal keeps a stable height as search filters
+     the list (it no longer shrinks down to one result). */
+  height: 44vh;
+  align-content: start;
+  overflow-y: auto;
+}
+.provider-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.provider-picker-item:hover {
+  border-color: var(--text-muted);
+}
+.provider-picker-item-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.provider-picker-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.provider-picker-item-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-remove-btn {
+  color: var(--danger, #c0392b);
+  margin-right: auto;
+}
+
+/* ===== Provider config modal (polished, scoped) ===== */
+.provider-modal {
+  width: 560px;
+  border-radius: var(--radius-xl);
+}
+/* Header + footer are separated from the body by hairline dividers (reference),
+   so the three zones read as distinct without heavy chrome. */
+.provider-modal .models-modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.provider-modal .models-modal-body {
+  padding: 22px;
+  gap: 0;
+}
+.provider-modal .models-modal-footer {
+  padding: 16px 22px;
+  margin-top: 0;
+  border-top: 1px solid var(--border);
+}
+/* Inputs + buttons inside this modal */
+.provider-modal .input {
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+.provider-modal .btn {
+  border-radius: var(--radius-md);
+}
+
+/* Header: logo tile + title (scoped so it beats .models-modal-title) */
+.provider-modal .provider-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 20px;
+  font-weight: 700;
+}
+/* Understated remove action (reference shows it muted, not danger-red) */
+.provider-modal .provider-remove-btn {
+  color: var(--text-secondary);
+}
+.provider-modal .provider-remove-btn:hover {
+  color: var(--text-primary);
+}
+.provider-modal-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+/* Redesigned branded config-modal header: logo tile + name + status pill. */
+.provider-modal .provider-modal-header {
+  align-items: center;
+}
+.provider-modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.provider-modal-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.provider-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.provider-status-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.provider-status-pill-ok {
+  color: var(--success);
+  background: var(--success-bg);
+}
+.provider-status-pill-loading,
+.provider-status-pill-muted {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+
+/* Labelled field block (API key). */
+.provider-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.provider-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.provider-field-meta {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* API-key field: masked preview (or input) on the left, Show / Replace on the
+   right, inside one inset control — differentiated by fill only, no stroke. */
+.provider-key-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+.provider-key-field:focus-within {
+  background: var(--bg-hover);
+}
+.provider-key-input,
+.provider-key-masked {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-key-input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  outline: none;
+}
+.provider-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.provider-key-sep {
+  color: var(--border-bright);
+  font-size: 13px;
+}
+.provider-link-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.provider-link-btn:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* Custom-provider modal still uses the old leading-icon key row. */
+.provider-key-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.provider-key-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.provider-key-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.provider-key-row .settings-toggle-btn {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 6px 4px;
+}
+.provider-key-row .settings-toggle-btn:hover {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+/* Custom-provider modal: hint shown before a base URL is entered */
+.provider-custom-hint {
+  margin-top: 20px;
+}
+
+/* Logo dropdown (model-picker provider select): brand logo inside the control
+   and in each option, since a native <select> can't render logos. */
+.logo-select {
+  position: relative;
+}
+.logo-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.logo-select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+.logo-select-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+.logo-select.open .logo-select-chevron {
+  transform: rotate(180deg);
+}
+.logo-select-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+/* Menu is elevation-based (shadow), no stroke; scrolls internally when the
+   provider list is long. */
+.logo-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 11;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 16px 40px -8px rgba(0, 0, 0, 0.55);
+}
+.logo-select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.logo-select-option:hover {
+  background: var(--bg-hover);
+}
+.logo-select-option.active {
+  background: var(--bg-hover);
+  font-weight: 600;
+}
+
+/* ===== "Select default model" picker — light-based (no strokes) ===== */
+.models-modal.model-select-modal {
+  width: 560px;
+  border: none;
+  border-radius: var(--radius-xl);
+  /* Let the provider dropdown extend past the modal instead of being clipped
+     (the base .models-modal has overflow:hidden, which hid the lower rows and
+     killed scrolling). The frosted background keeps its rounded shape. */
+  overflow: visible;
+}
+.model-select-modal .models-modal-header,
+.model-select-modal .models-modal-footer {
+  border: none;
+  padding: 20px 24px;
+}
+.model-select-modal .models-modal-body {
+  padding: 8px 24px 20px;
+  gap: 18px;
+}
+.model-select-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+.model-select-modal .settings-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 9px;
+  display: block;
+}
+/* Provider trigger + model <select>: filled controls, no borders. */
+.model-select-modal .logo-select-trigger,
+.model-select-modal select.input {
+  border: none;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.model-select-modal .logo-select.open .logo-select-trigger,
+.model-select-modal .logo-select-trigger:hover,
+.model-select-modal select.input:hover {
+  background: var(--bg-hover);
+}
+/* No focus stroke — the open/hover fill is the affordance. */
+.model-select-modal .logo-select-trigger:focus,
+.model-select-modal .logo-select-trigger:focus-visible,
+.model-select-modal select.input:focus,
+.model-select-modal select.input:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+/* Custom-provider modal: base URL + key as one connected control (no gap).
+   Inner inputs are borderless; a single divider separates the two rows. */
+.provider-key-group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+.provider-key-group:focus-within {
+  border-color: var(--border-focus);
+}
+.provider-key-group .provider-key-row {
+  padding: 4px 14px;
+}
+.provider-key-group .provider-key-row + .provider-key-row {
+  border-top: 1px solid var(--border);
+}
+.provider-key-group .provider-key-row .input {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Key-status line under the input */
+.provider-key-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.provider-key-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.provider-key-status-ok {
+  color: var(--success, #22c55e);
+}
+.provider-key-status-loading,
+.provider-key-status-muted {
+  color: var(--text-muted);
+}
+
+/* Models section */
+.provider-models {
+  margin-top: 22px;
+}
+.provider-models-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+/* Sentence-case label matching the "API key" field label, not an uppercase
+   micro-heading (reference). */
+.provider-models-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.provider-models-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Model pills */
+.provider-models-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0;
+}
+/* Chips + add/more pills are differentiated by fill only — no strokes, all
+   "light-based" (elevation). */
+.provider-model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 7px 5px 11px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+/* Chip label doubles as an "edit this model" button — reset button chrome. */
+.provider-model-chip-label {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-model-chip-label:hover {
+  color: var(--accent-text);
+}
+.provider-model-chip-del,
+.provider-model-chip-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+.provider-model-chip-del:hover,
+.provider-model-chip-edit:hover {
+  color: var(--text-primary);
+}
+
+/* Inline add + "+N more" — filled ghost pills (no dashed stroke) that read as
+   actions via a lighter fill on hover. */
+.provider-model-add-pill,
+.provider-model-more-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-elevated) 60%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.provider-model-more-pill {
+  padding: 6px 12px;
+}
+.provider-model-add-pill:hover,
+.provider-model-more-pill:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+.provider-model-chip-input {
+  padding-right: 9px;
+}
+.provider-model-add-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  min-width: 130px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-primary);
+}
+.provider-model-chip-busy {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 .oauth-signin-btn {
   display: inline-flex;
   align-items: center;
@@ -6676,6 +8183,257 @@ html {
   font-size: 12px;
   color: var(--text-muted);
   margin: 0 0 10px;
+}
+
+/* Hermes account (device login) — section hint + summary row. */
+.settings-section-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+/* Signed-in identity card: avatar · name/email/status · sign-out. */
+.hermes-account-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border: none;
+  border-radius: var(--radius-lg);
+}
+
+.hermes-account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.hermes-account-avatar-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-hover), var(--accent));
+}
+
+.hermes-account-who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  /* Push the sign-out button to the card's right edge. */
+  margin-right: auto;
+}
+
+.hermes-account-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hermes-account-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hermes-account-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--success);
+}
+
+.hermes-account-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-bg);
+}
+
+/* Status as two icon chips: Connected (green) + Sync on (neutral). */
+.hermes-account-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.hermes-account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.hermes-account-chip svg {
+  flex-shrink: 0;
+}
+.hermes-account-chip.is-connected {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+}
+
+/* Sign-in modal — device-login (RFC 8628) with a loader spinning around the
+   brand mark while awaiting browser approval. Uses .models-modal-overlay for
+   the backdrop. Theme-aware; matches the dark mock in the default theme. */
+.hermes-signin-modal {
+  position: relative;
+  width: 440px;
+  max-width: 92vw;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  padding: 40px 32px 0;
+  text-align: center;
+}
+
+.hermes-signin-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.hermes-signin-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.hermes-signin-emblem {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1.5px solid var(--border-bright);
+}
+/* The spinning bright arc; the faint full ring is the emblem's own border. */
+.hermes-signin-ring {
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 9999px;
+  border: 1.5px solid transparent;
+  border-top-color: var(--text-primary);
+  animation: hermes-signin-spin 0.9s linear infinite;
+}
+@keyframes hermes-signin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Success / error glyphs, tinted to the foreground colour. */
+.hermes-signin-bolt {
+  display: flex;
+  color: var(--text-primary);
+}
+/* The brand mark clipped to a disc; the logo is sized larger than this box so
+   the asset's built-in padding is cropped and the mark fills the emblem. */
+.hermes-signin-mark {
+  width: 76px;
+  height: 76px;
+  border-radius: 9999px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hermes-signin-mark img {
+  border-radius: 0;
+}
+
+.hermes-signin-title {
+  margin: 24px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.hermes-signin-subtitle {
+  margin: 10px auto 0;
+  max-width: 300px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.hermes-signin-code {
+  margin-top: 26px;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-primary);
+  user-select: all;
+}
+.hermes-signin-copy {
+  margin: 16px auto 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.hermes-signin-copy:hover {
+  color: var(--text-primary);
+}
+
+.hermes-signin-footer {
+  margin: 30px -32px 0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hermes-signin-footer-status {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.hermes-signin-cancel {
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.hermes-signin-cancel:hover {
+  opacity: 0.8;
 }
 
 /* Prominent outcome banner shown when the sign-in finishes — the raw
@@ -7059,6 +8817,17 @@ html {
   gap: 7px;
 }
 
+/* Secondary buttons across the Gateway page go light-based — lifted fill, no
+   stroke (Stop, Restart, Generate, modal Cancel). */
+.gateway-management .btn-secondary {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.gateway-management .btn-secondary:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
+}
+
 .gateway-overview {
   display: flex;
   align-items: flex-start;
@@ -7096,15 +8865,18 @@ html {
   gap: 10px;
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
   color: var(--text-muted);
+  transition:
+    box-shadow var(--transition),
+    border-color var(--transition);
 }
 
 .gateway-search:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(0, 136, 255, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .gateway-search input {
@@ -7141,9 +8913,13 @@ html {
 }
 
 .gateway-platform-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 12px;
+  /* One grouped lifted panel; platforms are rows split by hairlines instead of
+     separate bordered cards. */
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 /* Chinese domestic platform quick-connect section */
@@ -7268,25 +9044,24 @@ html {
 }
 
 .gateway-platform-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 12px 16px;
   margin-bottom: 0;
-  transition:
-    border-color var(--transition),
-    background var(--transition),
-    box-shadow var(--transition);
+  transition: background var(--transition);
+}
+
+.gateway-platform-card + .gateway-platform-card {
+  border-top: 1px solid var(--border);
 }
 
 .gateway-platform-card:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border-bright);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
 }
 
 .gateway-platform-card:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-subtle);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
 }
 
 .gateway-platform-header {
@@ -7402,7 +9177,22 @@ html {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  /* Docs / Test / Configure stay out of the way — revealed on row hover or
+     keyboard focus, and collapsed (no reserved space) otherwise. */
+  margin-top: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height var(--transition),
+    opacity var(--transition),
+    margin-top var(--transition);
+}
+.gateway-platform-card:hover .gateway-platform-actions,
+.gateway-platform-card:focus-within .gateway-platform-actions {
+  margin-top: 10px;
+  max-height: 44px;
+  opacity: 1;
 }
 
 .gateway-platform-actions-left,
@@ -7472,7 +9262,7 @@ html {
 .gateway-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7483,13 +9273,18 @@ html {
 .gateway-modal {
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-bright);
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
   width: 840px;
   max-width: 100%;
   max-height: 85vh;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
   overflow: hidden;
 }
 
@@ -7498,8 +9293,7 @@ html {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 14px 18px 6px;
   flex-shrink: 0;
 }
 
@@ -7541,8 +9335,7 @@ html {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
+  padding: 12px 18px 16px;
   flex-shrink: 0;
 }
 
@@ -7737,8 +9530,8 @@ html {
   justify-content: center;
   min-height: 140px;
   color: var(--text-muted);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
 }
 
 @media (max-width: 760px) {
@@ -7795,34 +9588,52 @@ html {
   background: var(--accent-subtle);
 }
 
-/* Theme grid (VS Code-style theme picker) */
+/* Theme grid — compact, borderless cards; the selection is a ring, not a box
+   around every tile, so the grid reads calm. */
 .settings-theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 
 .settings-theme-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
-  background: var(--bg-primary);
-  border: 1.5px solid var(--border);
+  padding: 6px;
+  background: none;
+  border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition);
+  transition:
+    background var(--transition),
+    box-shadow var(--transition);
   text-align: left;
   font-family: var(--font-sans);
 }
 
 .settings-theme-card:hover {
-  border-color: var(--border-bright);
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
 .settings-theme-card.active {
-  border-color: var(--accent);
   background: var(--accent-subtle);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+/* "N more…" tile — matches a card's footprint, quiet until hovered. */
+.settings-theme-more {
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+}
+.settings-theme-more:hover {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 
 /* Live preview rendered with the target theme's own variables */
@@ -7911,6 +9722,68 @@ html {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+/* Grouped preferences — one quiet card, hairline row dividers, macOS-style. */
+.settings-group {
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  overflow: hidden;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--border);
+}
+.settings-row-text {
+  min-width: 0;
+}
+.settings-row-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.settings-row-hint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Segmented control (font, hardware accel) — a track with pill segments. */
+.settings-seg {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, #000 18%, transparent);
+}
+.settings-seg-btn {
+  padding: 5px 12px;
+  border: none;
+  background: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+.settings-seg-btn:hover {
+  color: var(--text-primary);
+}
+.settings-seg-btn.active {
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  color: var(--text-primary);
 }
 
 /* Language picker dropdown */
@@ -8017,6 +9890,21 @@ html {
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.agents-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agents-sync-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agents-create-clone {
@@ -8145,19 +10033,28 @@ html {
 /* ── Global profile modal (80vw × 80vh) ─────────────────────────────── */
 .profile-modal-overlay {
   padding: 24px;
+  /* Lighter scrim so the frosted glass reads as translucent, not a flat panel. */
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .profile-modal {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   width: 80vw;
   height: 80vh;
   max-width: 1100px;
   max-height: 820px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-bright);
+  /* Frosted glass — same material language as the pickers: translucent tint +
+     blur, lifted on a soft ambient shadow instead of a hard border. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
   overflow: hidden;
 }
 
@@ -8166,7 +10063,38 @@ html {
   align-items: center;
   justify-content: space-between;
   padding: 16px 22px;
-  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Full-height left sidebar: avatar/name head + nav, spanning top to bottom. */
+.profile-modal-sidebar {
+  flex-shrink: 0;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* The distinct rail shade lives here now, so it reaches both edges. */
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.profile-modal-sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px 12px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.profile-modal-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.profile-modal-topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 18px 0;
   flex-shrink: 0;
 }
 
@@ -8197,7 +10125,7 @@ html {
 
 .profile-modal-close:hover {
   color: var(--text-primary);
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 
 /* Two-column body: identity/appearance left, detail/settings right. Scrolls
@@ -8210,13 +10138,12 @@ html {
 }
 
 .profile-modal-nav {
-  flex-shrink: 0;
-  width: 180px;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 20px 12px;
-  border-right: 1px solid var(--border);
+  padding: 4px 12px 16px;
   overflow-y: auto;
 }
 
@@ -8241,12 +10168,12 @@ html {
 }
 
 .profile-modal-nav-item:hover {
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
   color: var(--text-primary);
 }
 
 .profile-modal-nav-item.active {
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
   color: var(--text-primary);
   font-weight: 600;
 }
@@ -8299,12 +10226,72 @@ html {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 36px;
+  flex-wrap: wrap;
 }
 
 .profile-modal-name {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.profile-modal-name-edit {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  padding: 3px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: text;
+}
+
+.profile-modal-name-edit svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0;
+}
+
+.profile-modal-name-edit:hover,
+.profile-modal-name-edit:focus-visible {
+  background: var(--bg-tertiary);
+  border-color: var(--border);
+  outline: none;
+}
+
+.profile-modal-name-edit:hover svg,
+.profile-modal-name-edit:focus-visible svg {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+.profile-modal-name-input {
+  width: min(360px, 52vw);
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-secondary) 90%, #000);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  transition:
+    box-shadow var(--transition),
+    border-color var(--transition);
+}
+
+.profile-modal-name-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.28),
+    0 0 0 3px var(--accent-subtle);
 }
 
 .profile-modal-tag {
@@ -8334,7 +10321,7 @@ html {
   gap: 7px;
   font-size: 12px;
   color: var(--text-secondary);
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
   padding: 6px 12px;
   border-radius: var(--radius-md);
 }
@@ -8430,7 +10417,6 @@ html {
   display: flex;
   justify-content: flex-end;
   padding: 14px 22px;
-  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -8469,24 +10455,60 @@ html {
    right. Built on the same AppModal shell as the profile modal. */
 .settings-modal-overlay {
   padding: 24px;
+  /* Lighter scrim so the frosted glass reads as translucent. */
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .settings-modal {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   width: 80vw;
   height: 80vh;
   max-width: 1000px;
   max-height: 780px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-bright);
+  /* Frosted glass — same material as the pickers/profile modal. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   /* Chrome UI, not content: drag-selecting highlights nav labels and field
      captions, which looks broken. Copyable content opts back in below. */
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Full-height left sidebar: title head + grouped nav, spanning top to bottom
+   with a distinct lifted (lighter) rail shade. */
+.settings-modal-sidebar {
+  flex-shrink: 0;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.settings-modal-sidebar-head {
+  padding: 18px 20px 12px;
+  flex-shrink: 0;
+}
+.settings-modal-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-modal-topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 18px 0;
+  flex-shrink: 0;
 }
 
 .settings-modal input,
@@ -8526,7 +10548,7 @@ html {
 
 .settings-modal-close:hover {
   color: var(--text-primary);
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 
 .settings-modal-layout {
@@ -8536,13 +10558,12 @@ html {
 }
 
 .settings-modal-nav {
-  flex-shrink: 0;
-  width: 210px;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px 12px;
-  border-right: 1px solid var(--border);
+  padding: 4px 12px 18px;
   overflow-y: auto;
 }
 
@@ -8582,12 +10603,12 @@ html {
 }
 
 .settings-modal-nav-item:hover {
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
   color: var(--text-primary);
 }
 
 .settings-modal-nav-item.active {
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
   color: var(--text-primary);
 }
 
@@ -8630,9 +10651,10 @@ html {
 .settings-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
+  /* Light-based: a lifted translucent panel instead of a bordered box. */
+  border: none;
   border-radius: var(--radius-lg);
-  background: var(--bg-primary);
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
   overflow: hidden;
 }
 
@@ -8640,8 +10662,7 @@ html {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 16px 18px 8px;
 }
 
 .settings-card-icon {
@@ -8652,7 +10673,7 @@ html {
   height: 34px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 9%, transparent);
   color: var(--text-primary);
 }
 
@@ -8686,20 +10707,20 @@ html {
 
 .settings-card-badge.is-ok {
   color: var(--text-secondary);
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 
 .settings-card-badge.is-update {
   color: var(--accent, #4c8dff);
-  background: color-mix(in srgb, var(--accent, #4c8dff) 14%, transparent);
-  border-color: color-mix(in srgb, var(--accent, #4c8dff) 35%, transparent);
+  background: color-mix(in srgb, var(--accent, #4c8dff) 16%, transparent);
+  border-color: transparent;
 }
 
 .settings-card-body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 18px;
+  padding: 8px 18px 18px;
 }
 
 /* Labelled metadata grid (version chips). */
@@ -8763,6 +10784,16 @@ html {
   gap: 6px;
 }
 
+/* Buttons inside cards go light-based too — a lifted fill, no stroke. */
+.settings-card .btn-secondary {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.settings-card .btn-secondary:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
+}
+
 .settings-card-actions-note {
   font-size: 12px;
   color: var(--text-secondary);
@@ -8774,8 +10805,7 @@ html {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
+  padding-top: 4px;
 }
 
 .settings-toggle-text {
@@ -8943,6 +10973,81 @@ html {
   text-align: center;
 }
 
+/* Sync tab (per-profile cloud-sync controls). */
+.profile-sync-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.profile-sync-heading {
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.profile-sync-subtitle {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  max-width: 460px;
+}
+
+.profile-sync-body {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-sync-label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.profile-sync-value {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-sync-linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--success);
+}
+
+.profile-sync-note {
+  margin-top: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.profile-sync-note-warn {
+  color: var(--danger, #ef4444);
+}
+
+.profile-sync-warnings {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .profile-wallet-list {
   display: grid;
   gap: 12px;
@@ -9004,6 +11109,39 @@ html {
   font-size: 11px;
   font-weight: 700;
   flex: 0 0 auto;
+}
+
+/* Origin badge: cloud (backend-managed) vs local (this device). */
+.profile-wallet-badge {
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex: 0 0 auto;
+}
+
+.profile-wallet-badge-cloud {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.profile-wallet-badge-local {
+  background: var(--bg-tertiary, var(--accent-subtle));
+  color: var(--text-muted);
+}
+
+.profile-wallet-empty-note,
+.profile-wallet-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+  max-width: 340px;
+}
+
+.profile-wallet-note {
+  margin-top: 10px;
 }
 
 .profile-wallet-address {
@@ -11796,7 +13934,7 @@ html {
 
 .tools-tab:hover {
   color: var(--text-secondary);
-  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
 .tools-tab.active {
@@ -11813,7 +13951,7 @@ html {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   border-radius: 10px;
   padding: 1px 7px;
 }
@@ -11831,14 +13969,18 @@ html {
   flex: 1;
   max-width: 360px;
   padding: 0 10px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
+  transition:
+    box-shadow var(--transition),
+    border-color var(--transition);
 }
 
 .tools-mcp-search:focus-within {
-  border-color: var(--border-focus);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .tools-mcp-search-input {
@@ -11886,21 +14028,25 @@ html {
   display: flex;
   flex-direction: column;
   padding: 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  /* Light-based: lifted translucent panel, no stroke. */
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: background var(--transition);
   -webkit-user-select: none;
   user-select: none;
 }
 
 .tools-card:hover {
-  background: var(--bg-tertiary);
+  background: color-mix(in srgb, var(--text-primary) 9%, transparent);
 }
 
 .tools-card-enabled {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.tools-card-enabled:hover {
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
 }
 
 .tools-card-disabled {
@@ -11938,7 +14084,7 @@ html {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
+  background: color-mix(in srgb, var(--text-primary) 9%, transparent);
   padding: 7px;
   color: var(--text-secondary);
   flex-shrink: 0;
@@ -11954,6 +14100,212 @@ html {
   height: 100%;
 }
 
+/* MCP server logo — a plain <img> on a white tile in both themes (matching the
+   registry web UI), so single-colour black glyphs and colour logos both read. */
+.mcp-logo-tile {
+  background: #fff;
+  padding: 5px;
+}
+.mcp-logo-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ── MCP servers table (Server · Transport · Command/URL · Status · Enabled) ── */
+.mcp-table {
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  overflow: hidden;
+}
+.mcp-thead,
+.mcp-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 84px minmax(0, 2.4fr) 168px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+}
+.mcp-thead {
+  height: 40px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.mcp-th-enabled {
+  text-align: right;
+}
+.mcp-row {
+  min-height: 56px;
+  transition: background var(--transition);
+}
+.mcp-row + .mcp-row {
+  border-top: 1px solid var(--border);
+}
+.mcp-row:hover {
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+}
+.mcp-row-off {
+  opacity: 0.5;
+}
+.mcp-cell {
+  min-width: 0;
+}
+.mcp-cell-server {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mcp-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-transport {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.mcp-transport.is-http {
+  color: var(--accent-text, var(--accent));
+  background: color-mix(in srgb, var(--accent, #4c8dff) 16%, transparent);
+}
+.mcp-cmd {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.mcp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+.mcp-status.is-on,
+.mcp-status.is-ok {
+  color: var(--success);
+}
+.mcp-status.is-on .mcp-dot,
+.mcp-status.is-ok .mcp-dot {
+  background: var(--success);
+}
+.mcp-status.is-err {
+  color: var(--warning, #f59e0b);
+}
+.mcp-status.is-err .mcp-dot {
+  background: var(--warning, #f59e0b);
+}
+.mcp-cell-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.mcp-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.mcp-row:hover .mcp-row-actions,
+.mcp-row:focus-within .mcp-row-actions {
+  opacity: 1;
+}
+/* Plain muted icons in the row (not lifted buttons), per the clean mockup. */
+.mcp-row-actions .tools-icon-btn {
+  width: 26px;
+  height: 26px;
+  background: none;
+  color: var(--text-muted);
+}
+.mcp-row-actions .tools-icon-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+.mcp-tfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+.mcp-tfoot-hint {
+  opacity: 0.75;
+}
+
+/* Visual | JSON editor toggle in the MCP modal. */
+.mcp-mode-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, #000 18%, transparent);
+}
+.mcp-mode-btn {
+  padding: 5px 14px;
+  border: none;
+  background: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+.mcp-mode-btn:hover {
+  color: var(--text-primary);
+}
+.mcp-mode-btn.active {
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  color: var(--text-primary);
+}
+.mcp-json-input {
+  min-height: 240px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  resize: vertical;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+.mcp-json-error {
+  color: var(--error);
+}
+
 .tools-card-label {
   font-size: 14px;
   font-weight: 600;
@@ -11965,6 +14317,55 @@ html {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+/* Tools tab — a 2-column grouped grid of horizontal toggle rows (icon + name/
+   description + switch), separated by hairlines, on one lifted panel. */
+.tools-toolset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.tools-toolset-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.tools-toolset-row:hover {
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+}
+/* Row dividers on every row after the first (count-robust for odd/even). */
+.tools-toolset-row:nth-child(n + 3) {
+  border-top: 1px solid var(--border);
+}
+/* Column divider down the middle (left cells are the odd children). */
+.tools-toolset-row:nth-child(odd) {
+  border-right: 1px solid var(--border);
+}
+.tools-toolset-info {
+  flex: 1;
+  min-width: 0;
+}
+.tools-toolset-info .tools-card-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .tools-toolset-grid {
+    grid-template-columns: 1fr;
+  }
+  .tools-toolset-row:nth-child(odd) {
+    border-right: none;
+  }
+  .tools-toolset-row:nth-child(2) {
+    border-top: 1px solid var(--border);
+  }
 }
 
 /* Toggle switch */
@@ -11986,8 +14387,8 @@ html {
   display: block;
   width: 40px;
   height: 22px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-bright);
+  background: color-mix(in srgb, var(--text-primary) 16%, transparent);
+  border: none;
   border-radius: 11px;
   transition: all var(--transition);
   position: relative;
@@ -12058,9 +14459,9 @@ html {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition);
@@ -12068,7 +14469,7 @@ html {
 
 .tools-icon-btn:hover:not(:disabled) {
   color: var(--text-primary);
-  border-color: var(--border-bright);
+  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
 }
 
 .tools-icon-btn:disabled {
@@ -12078,7 +14479,7 @@ html {
 
 .tools-icon-btn-danger:hover:not(:disabled) {
   color: var(--error);
-  border-color: color-mix(in srgb, var(--error) 45%, transparent);
+  background: color-mix(in srgb, var(--error) 14%, transparent);
 }
 
 .tools-icon-btn svg {
@@ -12101,14 +14502,12 @@ html {
 
 .tools-error {
   color: var(--error);
-  background: var(--error-bg);
-  border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);
+  background: color-mix(in srgb, var(--error) 14%, transparent);
 }
 
 .tools-success {
   color: var(--success);
-  background: color-mix(in srgb, var(--success) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
 }
 
 .tools-empty {
@@ -12116,8 +14515,7 @@ html {
   gap: 12px;
   align-items: center;
   padding: 16px;
-  background: var(--bg-secondary);
-  border: 1px dashed var(--border-bright);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
   border-radius: var(--radius-md);
 }
 
@@ -12134,14 +14532,14 @@ html {
   border-radius: 999px;
   font-size: 11px;
   line-height: 1;
-  background: var(--bg-elevated);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   color: var(--text-secondary);
   margin-right: 6px;
 }
 
 .tools-mcp-disabled {
   color: var(--error);
-  background: var(--error-bg);
+  background: color-mix(in srgb, var(--error) 14%, transparent);
 }
 
 .tools-mcp-detail {
@@ -12372,6 +14770,13 @@ html {
   max-width: none;
 }
 
+/* The search box is a direct modal child (between header and body), so give it
+   the same horizontal inset as the header/body — otherwise it runs edge to edge
+   and reads as un-margined against the padded content. */
+.models-registry-modal .models-search {
+  margin: 4px 20px 16px;
+}
+
 .models-registry-body {
   max-height: 60vh;
   overflow-y: auto;
@@ -12470,7 +14875,7 @@ html {
 .models-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12478,12 +14883,18 @@ html {
 }
 
 .models-modal {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-bright);
+  /* Frosted glass — same material as the profile/settings modals. */
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
   width: 440px;
   max-width: 90vw;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
   overflow: hidden;
 }
 
@@ -12491,8 +14902,7 @@ html {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
+  padding: 16px 20px 4px;
 }
 
 .models-modal-header-actions {
@@ -12555,9 +14965,28 @@ html {
 .models-modal-field select.input {
   padding: 8px 12px;
   font-size: 13px;
-  border-radius: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  /* Lifted fill, not recessed — a darker field vanishes into the dark glass;
+     a light tint reads clearly as an input. */
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   box-sizing: border-box;
   max-width: 100%;
+  transition:
+    background var(--transition),
+    box-shadow var(--transition),
+    border-color var(--transition);
+}
+
+.models-modal-field .input:hover {
+  background: color-mix(in srgb, var(--text-primary) 11%, transparent);
+}
+
+.models-modal-field .input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--text-primary) 11%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .models-modal-field select.input {
@@ -12568,8 +14997,15 @@ html {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
+  padding: 12px 20px 16px;
+}
+.models-modal-footer .btn-secondary {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.models-modal-footer .btn-secondary:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
 }
 
 .models-error {
@@ -14054,4 +16490,27 @@ html {
 .web-preview-btn-active:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 25%, transparent) !important;
   color: var(--accent) !important;
+}
+
+/* ── Shared glass for the remaining modals ──
+   One override so every modal matches the frosted-glass, stroke-light language
+   (translucent tint + blur + soft shadow + hairline). Placed last so it wins
+   over each modal's own bg/border/box-shadow without touching their layout. */
+.sidebar-session-delete-modal,
+.sessions-modal,
+.hermes-signin-modal,
+.profile-wallet-modal,
+.profile-wallet-delete-modal,
+.agents-create-modal,
+.follow-us-modal,
+.discover-modal,
+.schedules-modal {
+  background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 0.5px solid var(--border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -16px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
 }

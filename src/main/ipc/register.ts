@@ -5,6 +5,7 @@ import {
   ipcMain,
   Menu,
   Notification,
+  nativeTheme,
   dialog,
   clipboard,
 } from "electron";
@@ -78,6 +79,7 @@ import {
 } from "../hermes-agent-compat";
 import {
   addMcpServer,
+  updateMcpServer,
   installMcpCatalogEntry,
   listMcpCatalog,
   listMcpServers,
@@ -91,6 +93,21 @@ import {
   cancelHermesAuthLogin,
   detectDeviceCode,
 } from "../hermes-auth";
+import { startDeviceLogin, cancelDeviceLogin } from "../hermes-account";
+import {
+  ensureHermesOneApiKey,
+  fetchHermesOneCredits,
+} from "../hermesone-provision";
+import {
+  syncAgents,
+  getAgentSyncStatus,
+  getLinkedAgentId,
+} from "../agent-sync";
+import {
+  getAccount,
+  clearAllAccounts,
+  findAccountProfile,
+} from "../account-store";
 import {
   isRemoteMode,
   isRemoteOnlyMode,
@@ -107,10 +124,18 @@ import {
   resolvePendingClarify,
 } from "../hermes";
 import {
+  freshDashboardWebSocketUrl,
   getDashboardStatus,
   startDashboard,
   stopDashboard,
 } from "../dashboard";
+import {
+  clearRemoteOAuthSession,
+  connectionConfigAfterRemoteOAuthLogin,
+  openRemoteOAuthLogin,
+  probeRemoteAuthMode,
+  remoteOAuthSessionState,
+} from "../remote-oauth";
 import {
   startSshTunnel,
   ensureSshTunnel,
@@ -193,6 +218,12 @@ import {
   remoteGetHermesVersion,
 } from "../remote-metadata";
 import {
+  remoteGetSkillContent,
+  remoteInstallSkill,
+  remoteListInstalledSkills,
+  remoteUninstallSkill,
+} from "../remote-skills";
+import {
   remoteAddModel,
   remoteGetModelConfig,
   remoteListModels,
@@ -205,6 +236,10 @@ import {
   addModel,
   removeModel,
   updateModel,
+  listModelDefinitions,
+  getModelDefinition,
+  setModelDefinition,
+  removeModelDefinition,
   type SavedModel,
 } from "../models";
 import { validateChatReadiness } from "../validation";
@@ -224,6 +259,7 @@ import {
   setProfileColor,
   setProfileAvatar,
   removeProfileAvatar,
+  setProfileName,
 } from "../profile-meta";
 import {
   createWallet,
@@ -232,6 +268,13 @@ import {
   listWallets,
   renameWallet,
 } from "../wallet-store";
+import {
+  listCustomProviders,
+  removeCustomProvider,
+  upsertCustomProvider,
+} from "../providers-store";
+import { syncWalletsForProfile } from "../wallet-sync";
+import { getWalletPortfolio, provisionAgentWallet } from "../wallet-actions";
 import { getTokenBalances } from "../wallet-balances";
 import type { ImportWalletInput } from "../../shared/wallets";
 import {
@@ -360,12 +403,17 @@ import {
   sshRunDump,
   sshDiscoverMemoryProviders,
 } from "../ssh-remote";
+import {
+  sshInspectHermesTarget,
+  sshProvisionDockerTarget,
+} from "../ssh-docker";
 
 export interface IpcContext {
   activeRuns: Map<string, () => void>;
   getMainWindow: () => BrowserWindow | null;
   notifyConnectionConfigChanged: () => void;
   notifyModelLibraryChanged: () => void;
+  notifyCustomProvidersChanged: () => void;
   openExternalUrl: (rawUrl: unknown) => void;
 }
 
@@ -527,6 +575,14 @@ async function withRemoteDashboard<T>(
   dashboardOperation: () => Promise<T>,
   legacyOperation: () => Promise<T> | T,
 ): Promise<T> {
+  if (conn.remoteAuthMode === "oauth") {
+    if (conn.remoteChatTransport === "legacy") {
+      throw new Error(
+        "Legacy remote transport cannot authenticate to an OAuth gateway.",
+      );
+    }
+    return dashboardOperation();
+  }
   if (conn.remoteChatTransport === "legacy") return legacyOperation();
   try {
     return await dashboardOperation();
@@ -607,6 +663,7 @@ export function registerIpcHandlers(context: IpcContext): void {
     getMainWindow,
     notifyConnectionConfigChanged,
     notifyModelLibraryChanged,
+    notifyCustomProvidersChanged,
     openExternalUrl,
   } = context;
   const mainWindow = getMainWindow();
@@ -785,6 +842,73 @@ export function registerIpcHandlers(context: IpcContext): void {
     );
   });
   ipcMain.handle("oauth-login-cancel", () => cancelHermesAuthLogin());
+
+  // Hermes account sign-in — OAuth 2.0 Device Authorization Grant against the
+  // Hermes backend. Streams progress to the renderer's modal, opens the browser
+  // approval page once the code is issued, and stores the encrypted session.
+  ipcMain.handle("hermes-account-login", async (event, profile?: string) => {
+    const result = await startDeviceLogin(profile, {
+      onCode: (info) => {
+        if (event.sender.isDestroyed()) return;
+        // Show the code in the modal, then open the browser to approve it.
+        event.sender.send("hermes-account-login-code", info);
+        openExternalUrl(info.verificationUriComplete);
+      },
+      emit: (chunk) => {
+        if (event.sender.isDestroyed()) return;
+        event.sender.send("hermes-account-login-progress", chunk);
+      },
+    });
+    // Convenience auto-provision: a fresh sign-in should yield model access
+    // without hand-adding keys. Best-effort and local-only — the key lands in
+    // the local profile `.env`, which remote/SSH chat doesn't read.
+    if (result.success && getConnectionConfig().mode === "local") {
+      void ensureHermesOneApiKey(profile).catch(() => {});
+    }
+    return result;
+  });
+  ipcMain.handle("hermes-account-login-cancel", () => cancelDeviceLogin());
+  // The account is device-wide (one Hermes One login for the whole app), but
+  // account.json lives under whichever profile was active at sign-in. Resolve
+  // it app-wide so switching the active agent doesn't read as signed out, and
+  // sign out wherever the file lives.
+  ipcMain.handle("hermes-account-get", (_event, profile?: string) =>
+    getAccount(findAccountProfile() ?? profile),
+  );
+  ipcMain.handle("hermes-account-logout", () => {
+    clearAllAccounts();
+    return { success: true };
+  });
+  // Auto-provision a Hermes One Inference key from the signed-in account when
+  // the profile has none (idempotent — an existing key is never replaced, the
+  // backend shows the raw key only once). Local mode only: the key is written
+  // to the local profile `.env`, which remote/SSH chat doesn't read — issuing
+  // one there would strand an orphan key on the backend every screen visit.
+  ipcMain.handle("hermesone-ensure-key", (_event, profile?: string) => {
+    if (getConnectionConfig().mode !== "local") {
+      return { status: "error", error: "Local connections only." };
+    }
+    return ensureHermesOneApiKey(profile?.trim() || getActiveProfileNameSync());
+  });
+  // The signed-in account's AI-credit balance, shown on the account card.
+  ipcMain.handle("hermesone-credits", () => fetchHermesOneCredits());
+
+  // Cloud agent sync — reconciles local profiles with the signed-in Hermes One
+  // account's cloud agents. `agent-sync-updated` tells the renderer to reload
+  // its profile list (pull-created profiles appear without a manual refresh).
+  ipcMain.handle("agent-sync-run", async (event) => {
+    const result = await syncAgents();
+    if (!event.sender.isDestroyed()) {
+      event.sender.send("agent-sync-updated", result);
+    }
+    return result;
+  });
+  ipcMain.handle("agent-sync-status", () => getAgentSyncStatus());
+  // The cloud agent id a profile is currently linked to (null when unlinked),
+  // for the per-profile Sync tab.
+  ipcMain.handle("agent-sync-linked-id", (_event, profile: string) =>
+    getLinkedAgentId(profile),
+  );
 
   // Configuration (profile-aware)
   ipcMain.handle("get-locale", () => getAppLocale());
@@ -1118,6 +1242,8 @@ export function registerIpcHandlers(context: IpcContext): void {
         ...existing,
         mode,
         remoteUrl,
+        remoteAuthMode:
+          existing.remoteUrl === remoteUrl ? existing.remoteAuthMode : "auto",
         apiKey: resolveConnectionApiKeyUpdate(
           existing,
           mode,
@@ -1156,12 +1282,21 @@ export function registerIpcHandlers(context: IpcContext): void {
       keyPath: string,
       remotePort: number,
       localPort: number,
+      dockerContainerName?: string,
     ) => {
       const current = getConnectionConfig();
       setConnectionConfig({
         ...current,
         mode: "ssh",
-        ssh: { host, port, username, keyPath, remotePort, localPort },
+        ssh: {
+          host,
+          port,
+          username,
+          keyPath,
+          remotePort,
+          localPort,
+          dockerContainerName: dockerContainerName?.trim() || "",
+        },
       });
       resetSshDashboardAvailability();
       notifyConnectionConfigChanged();
@@ -1173,6 +1308,56 @@ export function registerIpcHandlers(context: IpcContext): void {
     "test-remote-connection",
     (_event, url: string, apiKey?: string) => testRemoteConnection(url, apiKey),
   );
+
+  ipcMain.handle("probe-remote-auth-mode", async (_event, url: string) => {
+    const result = await probeRemoteAuthMode(url);
+    const conn = getConnectionConfig();
+    if (
+      conn.mode === "remote" &&
+      conn.remoteUrl.trim() === url.trim() &&
+      conn.remoteAuthMode !== result.authMode
+    ) {
+      setConnectionConfig({ ...conn, remoteAuthMode: result.authMode });
+      notifyConnectionConfigChanged();
+    }
+    return result;
+  });
+
+  ipcMain.handle("remote-oauth-login", async () => {
+    const loginConfig = getConnectionConfig();
+    if (loginConfig.mode !== "remote" || !loginConfig.remoteUrl.trim()) {
+      throw new Error("Configure a Remote gateway URL before signing in.");
+    }
+    const result = await openRemoteOAuthLogin(
+      loginConfig.remoteUrl,
+      context.getMainWindow(),
+    );
+    setConnectionConfig(
+      connectionConfigAfterRemoteOAuthLogin(
+        loginConfig.remoteUrl,
+        getConnectionConfig(),
+      ),
+    );
+    notifyConnectionConfigChanged();
+    return result;
+  });
+
+  ipcMain.handle("remote-oauth-logout", async () => {
+    const conn = getConnectionConfig();
+    if (conn.mode !== "remote" || !conn.remoteUrl.trim()) {
+      throw new Error("Remote gateway is not configured.");
+    }
+    await clearRemoteOAuthSession(conn.remoteUrl);
+    return { signedIn: false };
+  });
+
+  ipcMain.handle("remote-oauth-session-state", () => {
+    const conn = getConnectionConfig();
+    if (conn.mode !== "remote" || !conn.remoteUrl.trim()) {
+      return { signedIn: false };
+    }
+    return remoteOAuthSessionState(conn.remoteUrl);
+  });
 
   ipcMain.handle(
     "test-ssh-connection",
@@ -1192,6 +1377,52 @@ export function registerIpcHandlers(context: IpcContext): void {
         remotePort,
         localPort: 19642,
       }),
+  );
+
+  // Docker-backed SSH targets (issue #432): survey the remote (host install,
+  // ~/.hermes state, launcher hook, running Hermes containers) and provision
+  // the launcher hook + ~/.hermes symlink for a selected container. Both take
+  // explicit connection params so Settings/Welcome can inspect a draft config
+  // before saving it.
+  ipcMain.handle(
+    "inspect-ssh-hermes-target",
+    (
+      _event,
+      host: string,
+      port: number,
+      username: string,
+      keyPath: string,
+      remotePort: number,
+      dockerContainerName?: string,
+    ) =>
+      sshInspectHermesTarget(
+        { host, port, username, keyPath, remotePort, localPort: 19642 },
+        dockerContainerName?.trim() || "",
+      ),
+  );
+
+  ipcMain.handle(
+    "provision-ssh-docker-target",
+    async (
+      _event,
+      host: string,
+      port: number,
+      username: string,
+      keyPath: string,
+      remotePort: number,
+      dockerContainerName: string,
+    ) => {
+      const result = await sshProvisionDockerTarget(
+        { host, port, username, keyPath, remotePort, localPort: 19642 },
+        dockerContainerName,
+      );
+      if (result.ok) {
+        // The remote just gained a launcher/home it did not have — retry the
+        // dashboard probe immediately instead of waiting out the negative TTL.
+        resetSshDashboardAvailability();
+      }
+      return result;
+    },
   );
 
   ipcMain.handle("start-ssh-tunnel", async () => {
@@ -1562,10 +1793,25 @@ export function registerIpcHandlers(context: IpcContext): void {
     return isGatewayRunning();
   });
 
+  // Keep the native window appearance in step with the app's theme so the
+  // macOS sidebar vibrancy material is dark under a dark theme (and light under
+  // a light one) instead of following the system appearance — which is what
+  // made a dark theme on a light-mode Mac render a milky sidebar. "system" is
+  // passed through for the "System" theme so its `prefers-color-scheme` still
+  // tracks the OS. See the renderer's ThemeProvider.
+  ipcMain.handle("set-native-appearance", (_event, source: unknown) => {
+    if (source === "dark" || source === "light" || source === "system") {
+      nativeTheme.themeSource = source;
+    }
+  });
+
   // Dashboard/WebSocket transport probe. This is intentionally separate from
   // the current chat path while we validate the ordered event stream.
   ipcMain.handle("dashboard-status", (_event, profile?: string) =>
     getDashboardStatus(profile),
+  );
+  ipcMain.handle("fresh-dashboard-ws-url", (_event, profile?: string) =>
+    freshDashboardWebSocketUrl(profile),
   );
   ipcMain.handle("start-dashboard", (_event, profile?: string) =>
     startDashboard(profile),
@@ -1854,7 +2100,11 @@ export function registerIpcHandlers(context: IpcContext): void {
       // profile the user actually selected — and it survives relaunches.
       const active = getActiveProfileNameSync();
       const list = await sshListProfiles(conn.ssh);
-      return list.map((p) => ({ ...p, isActive: p.name === active }));
+      return list.map((p) => ({
+        ...p,
+        id: p.name,
+        isActive: p.name === active,
+      }));
     }
     return listProfiles();
   });
@@ -1902,6 +2152,16 @@ export function registerIpcHandlers(context: IpcContext): void {
   ipcMain.handle("set-profile-color", (_event, name: string, color: string) =>
     setProfileColor(name, color),
   );
+  ipcMain.handle("set-profile-name", (_event, id: string, name: string) => {
+    const conn = getConnectionConfig();
+    if (conn.mode === "ssh" || conn.mode === "remote") {
+      return {
+        success: false,
+        error: "Agent renaming is only supported for local profiles",
+      };
+    }
+    return setProfileName(id, name);
+  });
   ipcMain.handle(
     "set-profile-avatar",
     (_event, name: string, dataUrl: string) => setProfileAvatar(name, dataUrl),
@@ -1931,6 +2191,48 @@ export function registerIpcHandlers(context: IpcContext): void {
     "delete-wallet",
     (_event, profile: string | undefined, id: string) =>
       deleteWallet(profile, id),
+  );
+
+  // Custom (OpenAI-compatible) providers are desktop-local and profile-scoped.
+  // This store owns provider identity (name + base URL) so a configured
+  // provider renders as a card independent of whether a model is added yet; the
+  // key still lives in the profile `.env` and models in `models.json`.
+  ipcMain.handle("list-custom-providers", (_event, profile?: string) =>
+    listCustomProviders(profile),
+  );
+  ipcMain.handle(
+    "upsert-custom-provider",
+    (
+      _event,
+      profile: string | undefined,
+      input: { name: string; baseUrl: string },
+    ) => {
+      const record = upsertCustomProvider(profile, input);
+      notifyCustomProvidersChanged();
+      return record;
+    },
+  );
+  ipcMain.handle(
+    "remove-custom-provider",
+    (_event, profile: string | undefined, name: string) => {
+      removeCustomProvider(profile, name);
+      notifyCustomProvidersChanged();
+    },
+  );
+  // Cloud wallets provisioned by the backend for the profile's linked agent.
+  // Read-only here; the desktop no longer mints wallets locally.
+  ipcMain.handle("wallet-sync", (_event, profile?: string) =>
+    syncWalletsForProfile(profile),
+  );
+  // Backend-driven wallet ops used by the Office's space representatives
+  // (bank tellers): balances and provisioning both live server-side.
+  ipcMain.handle(
+    "wallet-portfolio",
+    (_event, profile: string | undefined, walletId: string) =>
+      getWalletPortfolio(profile, walletId),
+  );
+  ipcMain.handle("wallet-provision", (_event, profile?: string) =>
+    provisionAgentWallet(profile),
   );
   ipcMain.handle("get-token-balances", (_event, address: string) =>
     getTokenBalances(address),
@@ -2015,11 +2317,17 @@ export function registerIpcHandlers(context: IpcContext): void {
     },
   );
 
-  // Skills
+  // Skills. Remote (HTTP) mode routes to the dashboard's /api/skills* —
+  // falling through to the local CLI there showed (and mutated) the LOCAL
+  // machine's skills while connected to a remote (#578's report). Bundled
+  // skills stay local in remote mode: that list is the shipped catalog, not
+  // per-machine state.
   ipcMain.handle("list-installed-skills", (_event, profile?: string) => {
     const conn = getConnectionConfig();
     if (conn.mode === "ssh" && conn.ssh)
       return sshListInstalledSkills(conn.ssh, profile);
+    if (conn.mode === "remote")
+      return remoteListInstalledSkills(activeSshProfile(profile));
     return listInstalledSkills(profile);
   });
   ipcMain.handle("list-bundled-skills", () => {
@@ -2031,6 +2339,8 @@ export function registerIpcHandlers(context: IpcContext): void {
     const conn = getConnectionConfig();
     if (conn.mode === "ssh" && conn.ssh)
       return sshGetSkillContent(conn.ssh, skillPath);
+    if (conn.mode === "remote")
+      return remoteGetSkillContent(skillPath, activeSshProfile());
     return getSkillContent(skillPath);
   });
   ipcMain.handle(
@@ -2039,6 +2349,8 @@ export function registerIpcHandlers(context: IpcContext): void {
       const conn = getConnectionConfig();
       if (conn.mode === "ssh" && conn.ssh)
         return sshInstallSkill(conn.ssh, identifier);
+      if (conn.mode === "remote")
+        return remoteInstallSkill(identifier, activeSshProfile(_profile));
       return installSkill(identifier, _profile);
     },
   );
@@ -2048,6 +2360,8 @@ export function registerIpcHandlers(context: IpcContext): void {
       const conn = getConnectionConfig();
       if (conn.mode === "ssh" && conn.ssh)
         return sshUninstallSkill(conn.ssh, name);
+      if (conn.mode === "remote")
+        return remoteUninstallSkill(name, activeSshProfile(_profile));
       return uninstallSkill(name, _profile);
     },
   );
@@ -2176,7 +2490,9 @@ export function registerIpcHandlers(context: IpcContext): void {
         getActiveProfileNameSync(),
       );
     }
-    return listModels();
+    // Pass the active profile so terminal-added `custom_providers:` entries in
+    // that profile's config.yaml are merged into the library on read.
+    return listModels(getActiveProfileNameSync());
   });
   ipcMain.handle(
     "add-model",
@@ -2187,6 +2503,7 @@ export function registerIpcHandlers(context: IpcContext): void {
       model: string,
       baseUrl: string,
       contextLength?: number,
+      providerLabel?: string,
     ) => {
       const conn = getConnectionConfig();
       let addedModel: Awaited<ReturnType<typeof addModel>>;
@@ -2207,7 +2524,14 @@ export function registerIpcHandlers(context: IpcContext): void {
           getActiveProfileNameSync(),
         );
       } else {
-        addedModel = addModel(name, provider, model, baseUrl, contextLength);
+        addedModel = addModel(
+          name,
+          provider,
+          model,
+          baseUrl,
+          contextLength,
+          providerLabel,
+        );
       }
       notifyModelLibraryChanged();
       return addedModel;
@@ -2272,6 +2596,50 @@ export function registerIpcHandlers(context: IpcContext): void {
       return updated;
     },
   );
+
+  // Shared model definitions — per-model-id metadata (display name, context
+  // window, capabilities) reused across every provider that serves the model.
+  // Local-only, mirroring the existing scoping of the context-length override
+  // (the remote/SSH library paths never carried it); remote/ssh sessions get
+  // inert no-op results rather than an error.
+  ipcMain.handle("list-model-definitions", () => {
+    const conn = getConnectionConfig();
+    if (conn.mode === "remote" || conn.mode === "ssh") return [];
+    return listModelDefinitions();
+  });
+  ipcMain.handle("get-model-definition", (_event, model: string) => {
+    const conn = getConnectionConfig();
+    if (conn.mode === "remote" || conn.mode === "ssh") return null;
+    return getModelDefinition(model);
+  });
+  ipcMain.handle(
+    "set-model-definition",
+    (
+      _event,
+      model: string,
+      patch: {
+        name?: string;
+        contextLength?: number | null;
+        capabilities?: string[];
+        modalities?: { input?: string[]; output?: string[] };
+      },
+    ) => {
+      const conn = getConnectionConfig();
+      if (conn.mode === "remote" || conn.mode === "ssh") return null;
+      const def = setModelDefinition(model, patch);
+      // The gauge/picker read the merged model shape, so a definition change is
+      // a library change from the renderer's perspective.
+      notifyModelLibraryChanged();
+      return def;
+    },
+  );
+  ipcMain.handle("remove-model-definition", (_event, model: string) => {
+    const conn = getConnectionConfig();
+    if (conn.mode === "remote" || conn.mode === "ssh") return false;
+    const removed = removeModelDefinition(model);
+    if (removed) notifyModelLibraryChanged();
+    return removed;
+  });
 
   // Claw3D
   ipcMain.handle("claw3d-status", () => getClaw3dStatus());
@@ -2619,6 +2987,11 @@ export function registerIpcHandlers(context: IpcContext): void {
     "add-mcp-server",
     (_event, input: McpServerInput, profile?: string) =>
       addMcpServer(input, profile),
+  );
+  ipcMain.handle(
+    "update-mcp-server",
+    (_event, originalName: string, input: McpServerInput, profile?: string) =>
+      updateMcpServer(originalName, input, profile),
   );
   ipcMain.handle(
     "remove-mcp-server",

@@ -692,7 +692,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "telegram",
     name: "Telegram",
-    description: "Run Hermes from Telegram DMs, groups, and topics.",
+    description: "DMs, groups, and topics",
     docs_url: messagingDocs("telegram"),
     env_vars: [
       "TELEGRAM_BOT_TOKEN",
@@ -704,7 +704,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "discord",
     name: "Discord",
-    description: "Connect Hermes to Discord DMs, channels, and threads.",
+    description: "DMs, channels, and threads",
     docs_url: messagingDocs("discord"),
     env_vars: [
       "DISCORD_BOT_TOKEN",
@@ -717,7 +717,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "slack",
     name: "Slack",
-    description: "Use Hermes from Slack via Socket Mode.",
+    description: "Socket Mode",
     docs_url: messagingDocs("slack"),
     env_vars: ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"],
     required_env: ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"],
@@ -725,7 +725,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "mattermost",
     name: "Mattermost",
-    description: "Connect Hermes to Mattermost channels and direct messages.",
+    description: "Channels and direct messages",
     docs_url: messagingDocs("mattermost"),
     env_vars: [
       "MATTERMOST_URL",
@@ -737,7 +737,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "matrix",
     name: "Matrix",
-    description: "Use Hermes in Matrix rooms and direct messages.",
+    description: "Rooms and direct messages",
     docs_url: messagingDocs("matrix"),
     env_vars: [
       "MATRIX_HOMESERVER",
@@ -754,8 +754,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "whatsapp",
     name: "WhatsApp",
-    description:
-      "Use Hermes through the bundled WhatsApp bridge with QR-based auth.",
+    description: "Bundled bridge, QR sign-in",
     docs_url: messagingDocs("whatsapp"),
     env_vars: [
       "WHATSAPP_ENABLED",
@@ -782,7 +781,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "bluebubbles",
     name: "BlueBubbles (iMessage)",
-    description: "Use Hermes through iMessage via a BlueBubbles server.",
+    description: "Via a BlueBubbles server",
     docs_url: messagingDocs("bluebubbles"),
     env_vars: [
       "BLUEBUBBLES_SERVER_URL",
@@ -795,7 +794,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "homeassistant",
     name: "Home Assistant",
-    description: "Control your smart home from Hermes via Home Assistant.",
+    description: "Smart home via Home Assistant",
     docs_url: messagingDocs("homeassistant"),
     env_vars: ["HASS_URL", "HASS_TOKEN"],
     required_env: ["HASS_URL", "HASS_TOKEN"],
@@ -836,7 +835,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "dingtalk",
     name: "DingTalk",
-    description: "Connect Hermes to DingTalk groups.",
+    description: "DingTalk groups",
     docs_url: messagingDocs("dingtalk"),
     env_vars: [
       "DINGTALK_CLIENT_ID",
@@ -849,7 +848,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "feishu",
     name: "Feishu / Lark",
-    description: "Use Hermes inside Feishu / Lark.",
+    description: "Groups and direct messages",
     docs_url: messagingDocs("feishu"),
     env_vars: [
       "FEISHU_APP_ID",
@@ -906,7 +905,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "qqbot",
     name: "QQ Bot",
-    description: "Connect Hermes to a QQ Bot from the QQ Open Platform.",
+    description: "QQ Open Platform bot",
     docs_url: messagingDocs("qqbot"),
     env_vars: ["QQ_APP_ID", "QQ_CLIENT_SECRET", "QQ_ALLOWED_USERS"],
     required_env: ["QQ_APP_ID", "QQ_CLIENT_SECRET"],
@@ -914,7 +913,7 @@ export const MESSAGING_PLATFORM_CATALOG: MessagingPlatformDefinition[] = [
   {
     id: "yuanbao",
     name: "Yuanbao",
-    description: "Connect Hermes to Tencent Yuanbao.",
+    description: "Tencent Yuanbao",
     docs_url: messagingDocs("yuanbao"),
     env_vars: [],
     required_env: [],

@@ -54,7 +54,10 @@ import { providerListSafe } from "./secrets";
 import { HIDDEN_SUBPROCESS_OPTIONS } from "./process-options";
 import { type Attachment, escapeXmlAttr } from "../shared/attachments";
 import { type SessionModelOverride } from "../shared/model-override";
-import { OPENAI_COMPAT_PROVIDERS } from "../shared/url-key-map";
+import {
+  OPENAI_COMPAT_PROVIDERS,
+  customProviderEnvKey,
+} from "../shared/url-key-map";
 import {
   chatToolEventFromPayload,
   chatToolProgressLabel,
@@ -160,7 +163,11 @@ export function getRemoteAuthHeader(): Record<string, string> {
       return { Authorization: `Bearer ${_sshRemoteApiKey}` };
     return {};
   }
-  if (conn.mode === "remote" && conn.apiKey) {
+  if (
+    conn.mode === "remote" &&
+    conn.remoteAuthMode !== "oauth" &&
+    conn.apiKey
+  ) {
     return { Authorization: `Bearer ${conn.apiKey}` };
   }
   return {};
@@ -273,6 +280,7 @@ function resolveRemoteApiKey(url: string, apiKey?: string): string {
   if (normaliseRemoteUrl(conn.remoteUrl) !== normaliseRemoteUrl(url)) {
     return "";
   }
+  if (conn.remoteAuthMode === "oauth") return "";
   return conn.apiKey;
 }
 
@@ -2473,10 +2481,11 @@ function sendMessageViaCli(
         const models = readModels();
         const matching = models.find((m) => m.baseUrl === mc.baseUrl);
         if (matching) {
-          const envKey2 =
-            "CUSTOM_PROVIDER_" +
-            matching.name.replace(/[^A-Za-z0-9]/g, "_").toUpperCase() +
-            "_KEY";
+          // Key off the provider label (stable across all of a named custom
+          // provider's models) when present, else the model's own name.
+          const envKey2 = customProviderEnvKey(
+            matching.providerLabel || matching.name,
+          );
           resolvedKey = profileEnv[envKey2] || env[envKey2] || "";
         }
       } catch {
@@ -3387,7 +3396,15 @@ export function testRemoteConnection(
   apiKey?: string,
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    const target = `${normaliseRemoteUrl(url)}/health`;
+    const conn = getConnectionConfig();
+    const configuredOAuth =
+      apiKey === undefined &&
+      conn.mode === "remote" &&
+      conn.remoteAuthMode === "oauth" &&
+      normaliseRemoteUrl(conn.remoteUrl) === normaliseRemoteUrl(url);
+    const target = `${normaliseRemoteUrl(url)}${
+      configuredOAuth ? "/api/status" : "/health"
+    }`;
     const mod = target.startsWith("https") ? https : http;
     const headers: Record<string, string> = {};
     const resolvedApiKey = resolveRemoteApiKey(url, apiKey);

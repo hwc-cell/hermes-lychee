@@ -6,9 +6,21 @@ import type { DesktopSessionLocalError } from "../shared/session-continuation";
 import type {
   ImportWalletInput,
   ProfileWallet,
+  ProvisionWalletResult,
   WalletMutationResult,
+  WalletPortfolioResult,
+  WalletSyncResult,
 } from "../shared/wallets";
 import type { TokenBalancesResponse } from "../shared/tokens";
+import type { CustomProviderRecord } from "../shared/custom-providers";
+import type {
+  DeviceCodeInfo,
+  EnsureHermesOneKeyResult,
+  HermesAccount,
+  HermesAccountUser,
+  HermesOneCreditsResult,
+} from "../shared/account";
+import type { AgentSyncResult, AgentSyncStatus } from "../shared/agent-sync";
 import type {
   RegistryKind,
   RegistryItem,
@@ -93,6 +105,7 @@ interface DashboardConnection {
   baseUrl: string;
   wsUrl: string;
   token: string;
+  authMode?: "token" | "oauth";
   mode: "local" | "remote" | "ssh";
   profile?: string;
   pid?: number;
@@ -107,6 +120,7 @@ interface DashboardStatus {
   connection?: DashboardConnection;
   error?: string;
   logPath?: string;
+  needsOAuthLogin?: boolean;
 }
 
 /**
@@ -253,6 +267,26 @@ interface HermesAPI {
   cancelOAuthLogin: () => Promise<boolean>;
   onOAuthLoginProgress: (callback: (chunk: string) => void) => () => void;
 
+  // Hermes account sign-in (device authorization grant)
+  accountLogin: (
+    profile?: string,
+  ) => Promise<{ success: boolean; user?: HermesAccountUser; error?: string }>;
+  cancelAccountLogin: () => Promise<boolean>;
+  onAccountLoginCode: (callback: (info: DeviceCodeInfo) => void) => () => void;
+  onAccountLoginProgress: (callback: (chunk: string) => void) => () => void;
+  getAccount: (profile?: string) => Promise<HermesAccount | null>;
+  accountLogout: (profile?: string) => Promise<{ success: boolean }>;
+  ensureHermesOneKey: (profile?: string) => Promise<EnsureHermesOneKeyResult>;
+  getHermesOneCredits: () => Promise<HermesOneCreditsResult>;
+
+  // Cloud agent sync (profiles ↔ signed-in Hermes One account)
+  syncAgents: () => Promise<AgentSyncResult>;
+  getAgentSyncStatus: () => Promise<AgentSyncStatus>;
+  getLinkedAgentId: (profile: string) => Promise<string | null>;
+  onAgentSyncUpdated: (
+    callback: (result: AgentSyncResult) => void,
+  ) => () => void;
+
   getLocale: () => Promise<AppLocale>;
   setLocale: (locale: AppLocale) => Promise<AppLocale>;
 
@@ -312,6 +346,7 @@ interface HermesAPI {
   getConnectionConfig: () => Promise<{
     mode: "local" | "remote" | "ssh";
     remoteUrl: string;
+    remoteAuthMode: "auto" | "token" | "oauth";
     remoteChatTransport: "auto" | "dashboard" | "legacy";
     sshChatTransport: "auto" | "dashboard" | "legacy";
     hasApiKey: boolean;
@@ -323,6 +358,7 @@ interface HermesAPI {
       keyPath: string;
       remotePort: number;
       localPort: number;
+      dockerContainerName?: string;
     };
   }>;
   setConnectionConfig: (
@@ -338,6 +374,7 @@ interface HermesAPI {
     callback: (config: {
       mode: "local" | "remote" | "ssh";
       remoteUrl: string;
+      remoteAuthMode: "auto" | "token" | "oauth";
       remoteChatTransport: "auto" | "dashboard" | "legacy";
       sshChatTransport: "auto" | "dashboard" | "legacy";
       hasApiKey: boolean;
@@ -349,6 +386,7 @@ interface HermesAPI {
         keyPath: string;
         remotePort: number;
         localPort: number;
+        dockerContainerName?: string;
       };
     }) => void,
   ) => () => void;
@@ -359,8 +397,31 @@ interface HermesAPI {
     keyPath: string,
     remotePort: number,
     localPort: number,
+    dockerContainerName?: string,
   ) => Promise<boolean>;
+  inspectSshHermesTarget: (
+    host: string,
+    port: number,
+    username: string,
+    keyPath: string,
+    remotePort: number,
+    dockerContainerName?: string,
+  ) => Promise<import("../shared/ssh-docker").SshHermesTargetInspection>;
+  provisionSshDockerTarget: (
+    host: string,
+    port: number,
+    username: string,
+    keyPath: string,
+    remotePort: number,
+    dockerContainerName: string,
+  ) => Promise<import("../shared/ssh-docker").SshDockerProvisionResult>;
   testRemoteConnection: (url: string, apiKey?: string) => Promise<boolean>;
+  probeRemoteAuthMode: (
+    url: string,
+  ) => Promise<{ authMode: "token" | "oauth"; version: string | null }>;
+  remoteOAuthLogin: () => Promise<{ signedIn: true }>;
+  remoteOAuthLogout: () => Promise<{ signedIn: false }>;
+  remoteOAuthSessionState: () => Promise<{ signedIn: boolean }>;
   testSshConnection: (
     host: string,
     port: number,
@@ -483,7 +544,9 @@ interface HermesAPI {
   stopGateway: () => Promise<boolean>;
   restartGateway: (profile?: string) => Promise<boolean>;
   gatewayStatus: () => Promise<boolean>;
+  setNativeAppearance: (source: "dark" | "light" | "system") => Promise<void>;
   dashboardStatus: (profile?: string) => Promise<DashboardStatus>;
+  freshDashboardWsUrl: (profile?: string) => Promise<string>;
   startDashboard: (profile?: string) => Promise<DashboardStatus>;
   stopDashboard: (profile?: string) => Promise<boolean>;
 
@@ -592,6 +655,9 @@ interface HermesAPI {
   // Profiles
   listProfiles: () => Promise<
     Array<{
+      /** Stable internal profile id used for CLI, paths, and routing. */
+      id: string;
+      /** User-facing agent/profile name. */
       name: string;
       path: string;
       isDefault: boolean;
@@ -611,7 +677,7 @@ interface HermesAPI {
   createProfile: (
     name: string,
     cloneFrom: string | null,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; id?: string }>;
   deleteProfile: (
     name: string,
   ) => Promise<{ success: boolean; error?: string }>;
@@ -619,6 +685,10 @@ interface HermesAPI {
   setProfileColor: (
     name: string,
     color: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  setProfileName: (
+    id: string,
+    name: string,
   ) => Promise<{ success: boolean; error?: string }>;
   setProfileAvatar: (
     name: string,
@@ -628,6 +698,21 @@ interface HermesAPI {
     name: string,
   ) => Promise<{ success: boolean; error?: string }>;
   listWallets: (profile?: string) => Promise<ProfileWallet[]>;
+  listCustomProviders: (profile?: string) => Promise<CustomProviderRecord[]>;
+  upsertCustomProvider: (
+    profile: string | undefined,
+    input: { name: string; baseUrl: string },
+  ) => Promise<CustomProviderRecord | null>;
+  removeCustomProvider: (
+    profile: string | undefined,
+    name: string,
+  ) => Promise<void>;
+  syncWallets: (profile?: string) => Promise<WalletSyncResult>;
+  getWalletPortfolio: (
+    profile: string | undefined,
+    walletId: string,
+  ) => Promise<WalletPortfolioResult>;
+  provisionCloudWallet: (profile?: string) => Promise<ProvisionWalletResult>;
   createWallet: (
     profile?: string,
     name?: string,
@@ -782,6 +867,10 @@ interface HermesAPI {
       provider: string;
       model: string;
       baseUrl: string;
+      providerLabel?: string;
+      contextLength?: number;
+      capabilities?: string[];
+      modalities?: { input?: string[]; output?: string[] };
       createdAt: number;
     }>
   >;
@@ -791,6 +880,7 @@ interface HermesAPI {
     model: string,
     baseUrl: string,
     contextLength?: number,
+    providerLabel?: string,
   ) => Promise<{
     id: string;
     name: string;
@@ -798,6 +888,7 @@ interface HermesAPI {
     model: string;
     baseUrl: string;
     contextLength?: number;
+    providerLabel?: string;
     createdAt: number;
   }>;
   removeModel: (id: string) => Promise<boolean>;
@@ -806,7 +897,46 @@ interface HermesAPI {
     fields: Record<string, string>,
     contextLength?: number | null,
   ) => Promise<boolean>;
+  listModelDefinitions: () => Promise<
+    Array<{
+      model: string;
+      name?: string;
+      contextLength?: number;
+      capabilities?: string[];
+      modalities?: { input?: string[]; output?: string[] };
+      createdAt: number;
+      updatedAt: number;
+    }>
+  >;
+  getModelDefinition: (model: string) => Promise<{
+    model: string;
+    name?: string;
+    contextLength?: number;
+    capabilities?: string[];
+    modalities?: { input?: string[]; output?: string[] };
+    createdAt: number;
+    updatedAt: number;
+  } | null>;
+  setModelDefinition: (
+    model: string,
+    patch: {
+      name?: string;
+      contextLength?: number | null;
+      capabilities?: string[];
+      modalities?: { input?: string[]; output?: string[] };
+    },
+  ) => Promise<{
+    model: string;
+    name?: string;
+    contextLength?: number;
+    capabilities?: string[];
+    modalities?: { input?: string[]; output?: string[] };
+    createdAt: number;
+    updatedAt: number;
+  } | null>;
+  removeModelDefinition: (model: string) => Promise<boolean>;
   onModelLibraryChanged: (callback: () => void) => () => void;
+  onCustomProvidersChanged: (callback: () => void) => () => void;
 
   // Claw3D
   claw3dStatus: () => Promise<{
@@ -1065,6 +1195,19 @@ interface HermesAPI {
     }>
   >;
   addMcpServer: (
+    input: {
+      name: string;
+      type: "http" | "stdio";
+      url?: string;
+      command?: string;
+      args?: string[];
+      env?: Record<string, string>;
+      auth?: string;
+    },
+    profile?: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  updateMcpServer: (
+    originalName: string,
     input: {
       name: string;
       type: "http" | "stdio";

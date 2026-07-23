@@ -1,12 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  Menu,
-  nativeImage,
-  session,
-  shell,
-  Tray,
-} from "electron";
+import { app, BrowserWindow, nativeTheme, session, shell } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../../resources/icon.png?asset";
@@ -27,14 +19,14 @@ import { registerIpcHandlers } from "../ipc/register";
 import { setGatewayPromptParent } from "../gatewayPrompt";
 import { showChatContextMenu } from "./context-menu";
 import { buildMenu } from "./menu";
+import { setupUpdater } from "./updater";
 
-const APP_NAME = process.env.HERMES_DESKTOP_APP_NAME?.trim() || "Hermes Lychee";
+const APP_NAME = process.env.HERMES_DESKTOP_APP_NAME?.trim() || "Hermes One";
 const OPEN_DEVTOOLS_ON_START =
   process.env.HERMES_OPEN_DEVTOOLS === "1" ||
   process.env.HERMES_DESKTOP_OPEN_DEVTOOLS === "1";
 
 let mainWindow: BrowserWindow | null = null;
-let tray: Tray | null = null;
 const activeRuns = new Map<string, () => void>();
 
 export function startMainProcess(): void {
@@ -51,14 +43,14 @@ export function startMainProcess(): void {
     getMainWindow: () => mainWindow,
     notifyConnectionConfigChanged,
     notifyModelLibraryChanged,
+    notifyCustomProvidersChanged,
     openExternalUrl,
   });
 
-  // Auto-update disabled — this is a custom fork (Hermes Lychee)
-  // setupUpdater({ getMainWindow: () => mainWindow });
+  setupUpdater({ getMainWindow: () => mainWindow });
 
   app.whenReady().then(() => {
-    electronApp.setAppUserModelId("com.nousresearch.hermes");
+    electronApp.setAppUserModelId("com.hermes.desktop");
 
     app.on("browser-window-created", (_, window) => {
       optimizer.watchWindowShortcuts(window);
@@ -79,73 +71,44 @@ export function startMainProcess(): void {
     });
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          "Content-Security-Policy": [
-            "default-src 'self'; " +
-              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
-              "style-src 'self' 'unsafe-inline'; " +
-              "img-src 'self' data: blob: file: https:; " +
-              "media-src 'self' data: blob: file: https:; " +
-              "connect-src 'self' blob: http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https: wss:; " +
-              "font-src 'self' data:; " +
-              "frame-src 'self' https: http://127.0.0.1:* http://localhost:*; " +
-              "object-src 'none'; " +
-              "base-uri 'self';",
-          ],
-        },
-      });
+      const responseHeaders: Record<string, string[]> = {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [
+          "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob: file: https:; " +
+            "media-src 'self' data: blob: file: https:; " +
+            "connect-src 'self' blob: http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https: wss:; " +
+            "font-src 'self' data:; " +
+            "frame-src 'self' https: http://127.0.0.1:* http://localhost:*; " +
+            "object-src 'none'; " +
+            "base-uri 'self';",
+        ],
+      };
+      // Registry MCP icons are immutable, content-addressed SVGs. Rewrite their
+      // Cache-Control to a year (immutable ⇒ no revalidation) so each is fetched
+      // at most once and served from the on-disk HTTP cache thereafter.
+      if (
+        details.url.startsWith("https://registry.hermesone.org/registry-icon/")
+      ) {
+        for (const key of Object.keys(responseHeaders)) {
+          if (key.toLowerCase() === "cache-control") {
+            delete responseHeaders[key];
+          }
+        }
+        responseHeaders["Cache-Control"] = [
+          "public, max-age=31536000, immutable",
+        ];
+      }
+      callback({ responseHeaders });
     });
 
     createWindow();
     buildMenu({ getMainWindow: () => mainWindow, openExternalUrl });
 
-    // macOS: create a tray icon so closing the window minimizes to tray
-    // instead of quitting (issue #683).
-    if (process.platform === "darwin") {
-      const trayIcon = nativeImage
-        .createFromPath(icon)
-        .resize({ width: 16, height: 16 });
-      trayIcon.setTemplateImage(true);
-      tray = new Tray(trayIcon);
-      tray.setToolTip(APP_NAME);
-      tray.on("click", () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
-      });
-      const contextMenu = Menu.buildFromTemplate([
-        {
-          label: `显示 ${APP_NAME}`,
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-            }
-          },
-        },
-        { type: "separator" },
-        {
-          label: "退出",
-          click: () => {
-            tray?.destroy();
-            tray = null;
-            app.quit();
-          },
-        },
-      ]);
-      tray.setContextMenu(contextMenu);
-    }
-
     app.on("activate", () => {
-      if (mainWindow) {
-        mainWindow.show();
-        mainWindow.focus();
-      } else if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-      }
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   });
 
@@ -159,12 +122,11 @@ export function startMainProcess(): void {
     activeRuns.clear();
     cleanupTempMediaFiles();
     stopAllDashboards();
+    // Kill the SSH tunnel process on quit — otherwise the `ssh -N -L` child is
+    // orphaned (reparented to PID 1) and keeps holding its local port, so each
+    // relaunch leaks another tunnel and the port drifts (18642 → 61799 → …).
     stopSshTunnel();
     closeDbConnection();
-    if (tray) {
-      tray.destroy();
-      tray = null;
-    }
   });
 }
 
@@ -179,6 +141,10 @@ function notifyModelLibraryChanged(): void {
   mainWindow?.webContents.send("model-library-changed");
 }
 
+function notifyCustomProvidersChanged(): void {
+  mainWindow?.webContents.send("custom-providers-changed");
+}
+
 function openExternalUrl(rawUrl: unknown): void {
   if (!isAllowedExternalUrl(rawUrl)) {
     console.warn("[SECURITY] Blocked unsafe external URL");
@@ -191,20 +157,29 @@ function openExternalUrl(rawUrl: unknown): void {
 
 function createWindow(): void {
   const rendererHtmlPath = join(__dirname, "../renderer/index.html");
+  // Default the vibrancy material to dark (the app's default theme) so the
+  // first paint isn't a light, milky frost; the renderer overrides this to
+  // match the stored theme as soon as ThemeProvider mounts.
+  nativeTheme.themeSource = "dark";
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 900,
+    width: 1100,
+    height: 850,
     minWidth: 900,
     title: APP_NAME,
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : undefined,
+    // macOS: translucent window material so the sidebar reads as frosted glass.
+    // The material's light/dark tone follows `nativeTheme.themeSource`, which
+    // the renderer keeps in step with the app theme (default dark below) — so a
+    // dark theme never renders a light, milky sidebar.
     ...(process.platform === "darwin"
       ? {
           trafficLightPosition: { x: 16, y: 16 },
-          vibrancy: "under-window",
-          visualEffectState: "active",
+          vibrancy: "under-window" as const,
+          visualEffectState: "active" as const,
+          backgroundColor: "#00000000",
         }
       : {}),
     ...(process.platform === "linux" ? { icon } : {}),
@@ -220,15 +195,6 @@ function createWindow(): void {
   });
 
   mainWindow.on("ready-to-show", () => mainWindow?.show());
-
-  // macOS: close → hide to tray instead of quitting (issue #683)
-  if (process.platform === "darwin") {
-    mainWindow.on("close", (e) => {
-      if (!tray) return; // tray destroyed → actually quitting
-      e.preventDefault();
-      mainWindow?.hide();
-    });
-  }
   mainWindow.webContents.once("did-finish-load", () => {
     if (OPEN_DEVTOOLS_ON_START) {
       mainWindow?.webContents.openDevTools({ mode: "detach" });
@@ -239,7 +205,11 @@ function createWindow(): void {
   setGatewayPromptParent(() => mainWindow);
 
   mainWindow.webContents.on("render-process-gone", (_event, details) => {
-    console.error("[CRASH] Renderer process gone:", details.reason, details.exitCode);
+    console.error(
+      "[CRASH] Renderer process gone:",
+      details.reason,
+      details.exitCode,
+    );
   });
   mainWindow.webContents.on("console-message", (details) => {
     // Electron ≥35 passes a single event object (level is now a string);
@@ -251,27 +221,40 @@ function createWindow(): void {
       );
     }
   });
-  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
-    console.error("[LOAD FAIL]", errorCode, errorDescription);
-  });
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription) => {
+      console.error("[LOAD FAIL]", errorCode, errorDescription);
+    },
+  );
   mainWindow.webContents.setWindowOpenHandler((details) => {
     openExternalUrl(details.url);
     return { action: "deny" };
   });
   mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (isAllowedAppNavigationUrl(url, rendererHtmlPath, is.dev ? process.env["ELECTRON_RENDERER_URL"] : undefined)) return;
+    if (
+      isAllowedAppNavigationUrl(
+        url,
+        rendererHtmlPath,
+        is.dev ? process.env["ELECTRON_RENDERER_URL"] : undefined,
+      )
+    )
+      return;
     event.preventDefault();
     openExternalUrl(url);
   });
-  mainWindow.webContents.on("will-attach-webview", (event, webPreferences, params) => {
-    const isWebPreview = params.partition === "web-preview";
-    if (!isAllowedWebviewUrl(params.src, isWebPreview)) {
-      event.preventDefault();
-      console.warn("[SECURITY] Blocked webview attachment for untrusted URL");
-      return;
-    }
-    hardenWebviewPreferences(webPreferences);
-  });
+  mainWindow.webContents.on(
+    "will-attach-webview",
+    (event, webPreferences, params) => {
+      const isWebPreview = params.partition === "web-preview";
+      if (!isAllowedWebviewUrl(params.src, isWebPreview)) {
+        event.preventDefault();
+        console.warn("[SECURITY] Blocked webview attachment for untrusted URL");
+        return;
+      }
+      hardenWebviewPreferences(webPreferences);
+    },
+  );
   mainWindow.webContents.on("context-menu", (_event, params) => {
     showChatContextMenu(mainWindow, params);
   });
