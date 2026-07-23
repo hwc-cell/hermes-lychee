@@ -294,4 +294,6 @@ export default {
   auxiliaryVisionHint: "分析图片内容",
   auxiliaryWebExtract: "网页提取",
   auxiliaryWebExtractHint: "从网页中提取内容",
+  hermesoneApiKey: "Hermes One API Key",
+  hermesoneHint: "Hermes One 推理网关 — 快速按量计费推理",
 } as const;

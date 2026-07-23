@@ -83,4 +83,48 @@ export default {
   walletDeleteWarning:
     "此操作将从 Hermes 中永久移除该钱包。请确认已备份助记词——没有它你将无法恢复钱包。",
   walletDeleteConfirmLabel: "移除钱包",
+
+  stopped: "已停止",
+  noProfilesMatch: "没有匹配的配置",
+
+  // 同步
+  sectionSync: "同步",
+  sync: "同步",
+  syncing: "同步中…",
+  syncSignedOut: "未同步",
+  syncSignedOutHint: "请在服务商页面登录 Hermes One 账户，将 Agent 备份到云端。",
+  syncUpToDate: "已与 Hermes One 账户同步",
+  syncSummary: "已同步 — {{pushed}} 已推送, {{pulled}} 已拉取, {{created}} 新建",
+  syncErrors: "同步完成但有 {{count}} 个错误",
+  syncUnauthorized: "会话已过期 — 请在服务商页面重新登录",
+  syncFailed: "同步失败",
+  syncTitle: "云端同步",
+  syncPaneSubtitle: "将 Agent 备份到 Hermes One 账户，并拉取控制台中的更改。",
+  syncNow: "立即同步",
+  syncAccount: "账户",
+  syncLink: "云端 Agent",
+  syncLinked: "已关联",
+  syncNotLinked: "尚未关联 — 同步后将自动创建",
+  syncLastResult: "上次同步",
+  syncSignInHint: "请在服务商页面登录 Hermes One 账户以同步此 Agent。",
+
+  syncAction: {
+    "up-to-date": "已是最新",
+    pushed: "已推送至云端",
+    pulled: "已从云端拉取",
+    "created-remote": "已备份至云端",
+    "created-local": "已从云端创建",
+    unlinked: "已取消关联（云端 Agent 已删除）",
+    error: "同步错误",
+  },
+
+  // 钱包同步管理
+  walletSync: "刷新",
+  walletSyncing: "同步中…",
+  walletSourceLocal: "本地",
+  walletSourceCloud: "云端",
+  walletManagedEmpty: "暂无钱包",
+  walletSyncedHint: "钱包在 Hermes One 账户中管理，同步后即可在此查看。",
+  walletSignInHint: "请在服务商页面登录 Hermes One 账户以查看该 Agent 的钱包。",
+  walletForeignHint: "此 Agent 关联了另一个 Hermes One 账户，其钱包保持不变。",
 } as const;

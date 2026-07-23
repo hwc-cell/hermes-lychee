@@ -52,4 +52,6 @@ export default {
   copied: "已复制！",
   showMore: "展开更多",
   showLess: "收起",
+  addKey: "添加 Key",
+  activeModel: "当前模型",
 } as const;

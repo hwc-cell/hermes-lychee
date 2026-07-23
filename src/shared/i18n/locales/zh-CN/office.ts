@@ -56,4 +56,61 @@ export default {
   softwareRenderingPrefNotice: "已在 设置→外观 中关闭硬件加速，3D 工作区正在使用较慢的软件渲染。",
   reenableGpu: "重新启用 GPU 并重启",
   dismissNotice: "忽略",
+
+  // 建筑内部
+  enter_office: "进入办公室",
+  enter_bank: "进入银行",
+  enter_showroom: "进入展厅",
+  exitToCity: "返回城市",
+  showroomCardColor: "车身颜色",
+  showroomCardHint: "在展厅里四处看看…",
+
+  // 步行模式
+  walkMode: "自由走动",
+  walkModeExit: "退出步行 (Esc)",
+  walkHint: "WASD/方向键移动 · Shift 加速 · Esc 退出",
+  you: "玩家",
+
+  // 银行出纳员
+  repBankTeller: "银行柜员",
+  spaceBank: "银行",
+  repPanelAgentLabel: "Agent",
+  repPanelPickAgent: "选择 Agent…",
+  repActionCheckBalance: "查询余额",
+  repActionAccountStatus: "账户状态",
+  repActionCreateAccount: "创建账户",
+  repActionSendMoney: "转账给 Agent",
+  repActionWithdraw: "取款",
+  repActionDeposit: "存款",
+  repComingSoon: "即将推出",
+  repSoon: "即将",
+  repAtm: "ATM",
+  repAtmOnline: "在线",
+  repTellerOpen: "空闲",
+  repTellerServing: "正在为 {{name}} 服务",
+  repTellerIdle: "未选择 Agent",
+
+  // 余额面板
+  repTotalBalance: "总余额",
+  repBalancePlaceholder: "点击「查询余额」加载该 Agent 的资金总览。",
+  repLoadingBalance: "正在查询余额…",
+  repErrorTitle: "请求失败",
+  repRetry: "重试",
+  repEmptyWalletTitle: "空钱包",
+  repEmptyWalletBody: "该账户暂无资金。",
+  repLoading: "处理中…",
+  repErrorGeneric: "出错了，请重试。",
+
+  // 状态消息
+  repStatusSignedOut: "请先在服务商页面登录 Hermes 账户才能使用银行功能。",
+  repStatusUnlinked: "该 Agent 尚未关联云端 Agent…",
+  repWalletsNone: "暂无账户 — 创建一个开始使用。",
+  repBadgeTransactable: "可交易",
+  repBadgeReceiveOnly: "仅收款",
+  repBalanceNoTransactable: "该 Agent 暂无可交易账户…",
+  repBalanceEmpty: "暂无 token 余额。",
+  repBalanceTotal: "合计",
+  repCreateSuccess: "账户创建成功",
+  repCreateExists: "该 Agent 已有银行账户。",
+  repStatusForeign: "该 Agent 关联的是另一个 Hermes One 账户。",
 } as const;

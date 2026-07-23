@@ -225,4 +225,37 @@ export default {
   sshSuccess: "SSH 隧道已连接！",
   remoteSuccess: "连接成功！",
   apiGenerated: "API 密钥已生成——正在重启网关…",
+
+  // 主题/字体
+  theme_more: "还有 {{count}} 个…",
+  fontGsans: "G Sans",
+
+  // 远程 OAuth
+  remoteAuthDetecting: "自动检测认证方式…",
+  remoteOAuthTitle: "浏览器认证",
+  remoteOAuthHint: "此网关使用 OAuth 认证 — 通过浏览器登录后即可访问。",
+  remoteOAuthConnected: "已登录远程网关。",
+  remoteOAuthSignIn: "浏览器登录",
+  remoteOAuthSignOut: "退出登录",
+  remoteOAuthWorking: "处理中…",
+  remoteOAuthLoginSuccess: "远程网关登录成功。",
+  remoteOAuthLoginFailed: "远程网关登录失败。",
+  remoteOAuthCancelled: "远程网关登录已取消。",
+  remoteOAuthLogoutSuccess: "已退出远程网关。",
+  remoteChatTransportHint: "自动检测 Token 或 OAuth 认证方式…",
+
+  // SSH Docker
+  sshDockerTitle: "远程 Hermes 安装",
+  sshDockerDetect: "检测远程安装",
+  sshDockerDetecting: "检测中…",
+  sshDockerDetectHint: "检测 SSH 主机上是否已安装 Hermes。",
+  sshDockerHostInstall: "在主机上发现 Hermes CLI",
+  sshDockerContainersFound: "该主机上的 Hermes Docker 容器：",
+  sshDockerNoDataMount: "未挂载 /opt/data 数据卷",
+  sshDockerPortMatch: "发布端口 {{port}}",
+  sshDockerSetup: "设置 Docker 访问",
+  sshDockerSettingUp: "设置中…",
+  sshDockerSetupDone: "Docker 访问已就绪 — {{version}}",
+  sshDockerSetupFailed: "设置失败：{{msg}}",
+  sshDockerInspectFailed: "无法检查远程主机：{{msg}}",
 } as const;

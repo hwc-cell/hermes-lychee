@@ -26,6 +26,8 @@ export default {
     highDescription: "深度推理，适合复杂任务。",
     xhigh: "最大",
     xhighDescription: "在支持的模型上使用最大推理深度。",
+    faster: "更快",
+    smarter: "更智能",
   },
   emptyTitle: "今天想让我帮你做点什么？",
   emptyHint: "写代码、回答问题、搜索网页，或者其他任何事",
@@ -160,4 +162,7 @@ export default {
     follow: "关注",
     notNow: "以后再说",
   },
+  allModels: "全部模型",
+  noModelsMatch: "无匹配模型",
+  configure: "配置",
 } as const;
