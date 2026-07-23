@@ -2311,9 +2311,15 @@ export function registerIpcHandlers(context: IpcContext): void {
     "set-toolset-enabled",
     (_event, key: string, enabled: boolean, profile?: string) => {
       const conn = getConnectionConfig();
-      if (conn.mode === "ssh" && conn.ssh)
+      if (conn.mode === "ssh" && conn.ssh) {
         return sshSetToolsetEnabled(conn.ssh, key, enabled, profile);
-      return setToolsetEnabled(key, enabled, profile);
+      }
+      const result = setToolsetEnabled(key, enabled, profile);
+      // 工具开关变更后必须重启网关才能生效
+      if (isGatewayRunning(profile)) {
+        void restartGateway(profile);
+      }
+      return result;
     },
   );
 
