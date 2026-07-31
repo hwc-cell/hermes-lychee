@@ -312,8 +312,8 @@ export const ToolActivityGroup = memo(function ToolActivityGroup({
         >
           <div className="chat-tool-collapse-inner">
             <div className="chat-tool-group-items">
-              {orderedItems.map((it, index) => (
-                <ToolActivityItem key={`${it.id}-${index}`} msg={it} />
+              {orderedItems.map((it) => (
+                <ToolActivityItem key={it.callId || it.id} msg={it} />
               ))}
             </div>
           </div>

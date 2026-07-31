@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Copy, Check } from "lucide-react";
 import ProfileAvatar from "../../components/common/ProfileAvatar";
@@ -179,6 +179,14 @@ export const MessageRow = memo(function MessageRow({
 }: MessageRowProps): React.JSX.Element {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear the copy timer on unmount to avoid setState on unmounted component.
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   // MessageRow is wrapped in memo() but still re-renders on any prop change
   // (e.g. isLoading toggling at the end of a stream), and `parseMediaTokens`
@@ -205,7 +213,8 @@ export const MessageRow = memo(function MessageRow({
     try {
       await window.hermesAPI.copyToClipboard(bubbleContent);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback: clipboard write may fail in some environments
     }

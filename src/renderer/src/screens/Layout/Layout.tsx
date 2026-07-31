@@ -318,7 +318,18 @@ function Layout({
 
   // Re-check remote mode on tab switch (picks up Settings changes)
   useEffect(() => {
-    window.hermesAPI.isRemoteOnlyMode().then(setRemoteMode);
+    let cancelled = false;
+    window.hermesAPI
+      .isRemoteOnlyMode()
+      .then((v) => {
+        if (!cancelled) setRemoteMode(v);
+      })
+      .catch(() => {
+        /* best-effort — fail open */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [view]);
 
   // Restore the last-activated profile on launch. The main process persists it

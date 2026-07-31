@@ -90,6 +90,9 @@ export function useDiscoveredModels(
     }, 400);
     return (): void => {
       clearTimeout(handle);
+      // Invalidate the sequence so any in-flight async request bails out
+      // before calling setState on an unmounted component.
+      ++cancelRef.current;
     };
   }, [enabled, provider, baseUrl, apiKey, profile, refreshToken]);
 
