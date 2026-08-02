@@ -1469,7 +1469,8 @@ export function registerIpcHandlers(context: IpcContext): void {
       // to a generated id for legacy callers so the run is still tracked.
       const chatRunId = runId || `run-${randomUUID()}`;
       if (!isRemoteMode() && !isGatewayRunning(profile)) {
-        startGateway(profile);
+        startGatewayDetailed(profile); // fire-and-forget: the send path below
+        // will retry via gateway recovery; awaiting here would block the IPC.
       }
 
       const conn = getConnectionConfig();

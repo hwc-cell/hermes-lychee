@@ -2965,6 +2965,7 @@ export async function sendMessage(
 // Lazy init — called on first sendMessage or gateway start
 let _initialized = false;
 let _healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+let _delayedHealthCheck: ReturnType<typeof setTimeout> | null = null;
 
 function ensureInitialized(): void {
   if (_initialized) return;
@@ -3261,7 +3262,9 @@ export function startGatewayDetailed(profile?: string): GatewayStartResult {
 
   // Wait a bit then check if API server came up (only meaningful for the
   // active profile, whose URL getApiUrl() resolves to).
-  setTimeout(async () => {
+  if (_delayedHealthCheck) clearTimeout(_delayedHealthCheck);
+  _delayedHealthCheck = setTimeout(async () => {
+    _delayedHealthCheck = null;
     if (profileKey(profile) === profileKey(undefined)) {
       apiServerAvailable = await isApiServerReady(profile);
     }
@@ -3330,8 +3333,16 @@ export function stopGateway(
   const proc = gatewayProcesses.get(key);
   if (proc && isChildProcessAlive(proc)) {
     proc.kill("SIGTERM");
+    // Wait up to 2 s for the process to actually exit so the port is
+    // released before anyone tries to bind again (#7 / #16).
+    const exited = new Promise<void>((resolve) => proc.once("exit", resolve));
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 2000));
+    void Promise.race([exited, timeout]).then(() => {
+      gatewayProcesses.delete(key);
+    });
+  } else {
+    gatewayProcesses.delete(key);
   }
-  gatewayProcesses.delete(key);
 
   const pid = readPidFile(profile);
   if (pid) {
@@ -3355,6 +3366,10 @@ export function stopGateway(
   appStartedProfiles.delete(key);
   invalidateApiCacheFor(profile);
   stopTuiGatewayClient(profile);
+  if (_delayedHealthCheck) {
+    clearTimeout(_delayedHealthCheck);
+    _delayedHealthCheck = null;
+  }
 }
 
 // Python image prefixes covering both native Windows (pythonw.exe / python.exe)
