@@ -42,3 +42,6 @@ release/
 /*.ps1
 .mcp.json
 VoAPI/
+# Codex 误创建的子项目，不提交到 hermes-desktop
+ledger-api/
+ledger-web/
