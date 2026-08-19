@@ -792,6 +792,41 @@ const hermesAPI = {
   respondClarify: (requestId: string, answer: string): Promise<boolean> =>
     ipcRenderer.invoke("clarify-respond", { requestId, answer }),
 
+  /** The agent flagged a command for approval mid-run. The renderer shows an
+   *  inline approval bar and answers via `respondApproval`. */
+  onApprovalRequest: (
+    callback: (
+      runId: string,
+      req: {
+        sessionId: string;
+        command: string;
+        choices: string[];
+        allowPermanent: boolean;
+      },
+    ) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      runId: string,
+      req: {
+        sessionId: string;
+        command: string;
+        choices: string[];
+        allowPermanent: boolean;
+      },
+    ): void => callback(runId, req);
+    ipcRenderer.on("chat-approval-request", handler);
+    return () => ipcRenderer.removeListener("chat-approval-request", handler);
+  },
+
+  /** Answer a mid-run command approval (approve once / session / always / deny). */
+  respondApproval: (
+    sessionId: string,
+    choice: string,
+    all: boolean,
+  ): Promise<boolean> =>
+    ipcRenderer.invoke("approval-respond", { sessionId, choice, all }),
+
   // Gateway
   startGateway: (): Promise<GatewayStartResult> =>
     ipcRenderer.invoke("start-gateway"),

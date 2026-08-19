@@ -558,6 +558,22 @@ function Chat({
     [setMessages],
   );
 
+  // Flip an inline approval card to its resolved (read-only) state once the
+  // user has chosen. The gateway resumes the turn from here, so loading stays
+  // active until the next onChatDone.
+  const handleApprovalResolved = useCallback(
+    (id: string, choice: string) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.kind === "approval" && m.id === id
+            ? { ...m, chosen: choice, resolved: true }
+            : m,
+        ),
+      );
+    },
+    [setMessages],
+  );
+
   const handleClear = useCallback(() => {
     if (isLoading) {
       window.hermesAPI.abortChat(runId);
@@ -1015,6 +1031,7 @@ function Chat({
               onApprove={actions.handleApprove}
               onDeny={actions.handleDeny}
               onClarifyResolved={handleClarifyResolved}
+              onApprovalResolved={handleApprovalResolved}
               agentAvatar={agentAvatar}
             />
           )}

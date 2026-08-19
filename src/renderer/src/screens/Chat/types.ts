@@ -80,12 +80,31 @@ export interface ClarifyMessage {
   resolved?: boolean;
 }
 
+/**
+ * A mid-run command-approval request from the agent (`approval.request`).
+ * Rendered as an inline approval bar with Approve / Approve session / Always
+ * allow / Deny buttons. `resolved` flips once the user answers so the bar
+ * disables its controls and shows the chosen action.
+ */
+export interface ApprovalMessage {
+  id: string;
+  kind: "approval";
+  role: "agent";
+  sessionId: string;
+  command: string;
+  choices: string[];
+  allowPermanent: boolean;
+  resolved?: boolean;
+  chosen?: string;
+}
+
 export type ChatMessage =
   | ChatBubbleMessage
   | ReasoningMessage
   | ToolCallMessage
   | ToolResultMessage
-  | ClarifyMessage;
+  | ClarifyMessage
+  | ApprovalMessage;
 
 export interface ActiveTurn {
   turnId: string;

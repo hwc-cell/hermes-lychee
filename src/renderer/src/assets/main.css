@@ -4815,6 +4815,96 @@ body:has(.shell-vibrant),
   margin-top: 2px;
 }
 
+/* Mid-run command approval card (`approval.request`). */
+.chat-approval-card {
+  margin-top: 8px;
+  margin-bottom: 16px;
+  margin-left: 42px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warning, #f59e0b);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.chat-approval-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.chat-approval-command {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-base);
+}
+
+.chat-approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-approval-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.chat-approval-btn:hover {
+  border-color: var(--accent, #2563eb);
+  background: var(--bg-hover);
+}
+
+.chat-approval-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.chat-approval-once,
+.chat-approval-session,
+.chat-approval-always {
+  color: var(--success, #16a34a);
+}
+
+.chat-approval-deny {
+  color: var(--danger, #ef4444);
+}
+
+.chat-approval-card--resolved {
+  opacity: 0.85;
+}
+
+.chat-approval-answer {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.chat-approval-error {
+  font-size: 12px;
+  color: var(--danger, #ef4444);
+  margin-top: 2px;
+}
+
 /* Override Tailwind preflight spacing inside agent bubbles */
 .chat-bubble-agent p {
   margin: 0 0 0.85em !important;

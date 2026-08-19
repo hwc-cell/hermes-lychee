@@ -1071,6 +1071,43 @@ export function clearPendingClarify(requestId: string): void {
   pendingClarify.delete(requestId);
 }
 
+/**
+ * Pending command-approval requests, keyed by the gateway session id (the
+ * `approval.respond` RPC resolves by session_id, not request_id). When the
+ * agent flags a command for approval the stream handler registers a resolver
+ * here and surfaces the request to the renderer; the renderer's choice
+ * (approve once / approve session / always allow / deny) returns via the
+ * `approval-respond` IPC handler, which fires the resolver and forwards the
+ * choice to `approval.respond`. Entries self-clear on use and on turn end.
+ */
+const pendingApproval = new Map<
+  string,
+  (choice: string, all: boolean) => void
+>();
+
+export function registerPendingApproval(
+  sessionId: string,
+  resolver: (choice: string, all: boolean) => void,
+): void {
+  pendingApproval.set(sessionId, resolver);
+}
+
+export function resolvePendingApproval(
+  sessionId: string,
+  choice: string,
+  all: boolean,
+): boolean {
+  const resolver = pendingApproval.get(sessionId);
+  if (!resolver) return false;
+  pendingApproval.delete(sessionId);
+  resolver(choice, all);
+  return true;
+}
+
+export function clearPendingApproval(sessionId: string): void {
+  pendingApproval.delete(sessionId);
+}
+
 export interface ChatCallbacks {
   onChunk: (text: string) => void;
   /** Streaming reasoning / thinking tokens, when the provider emits them
@@ -1103,6 +1140,17 @@ export interface ChatCallbacks {
     requestId: string;
     question: string;
     choices: string[];
+  }) => void;
+  /** The agent flagged a command for approval mid-run (`approval.request`).
+   *  The renderer shows an inline approval bar; the user's choice (approve
+   *  once / approve session / always allow / deny) returns via the
+   *  `approval-respond` IPC handler, which resolves the pending request by
+   *  calling `approval.respond` on the live gateway client. */
+  onApproval?: (req: {
+    sessionId: string;
+    command: string;
+    choices: string[];
+    allowPermanent: boolean;
   }) => void;
 }
 
@@ -1934,6 +1982,7 @@ async function sendMessageViaTuiGateway(
       clearPendingClarify(pendingClarifyId);
       pendingClarifyId = null;
     }
+    clearPendingApproval(activeSessionId);
     cleanup();
     if (error) {
       cb.onError(error);
@@ -1949,6 +1998,7 @@ async function sendMessageViaTuiGateway(
       clearPendingClarify(pendingClarifyId);
       pendingClarifyId = null;
     }
+    clearPendingApproval(activeSessionId);
     cleanup();
   }
 
@@ -2036,28 +2086,53 @@ async function sendMessageViaTuiGateway(
     }
 
     if (event.type === "approval.request") {
-      // Match the existing local chat posture: Hermes One does not expose a
-      // mid-stream approval dialog, so answer the dashboard protocol once and
-      // keep the transcript focused on the resulting tool call/result events.
-      void client
-        .request(
-          "approval.respond",
-          {
-            session_id: activeSessionId,
-            choice: "once",
-            all: false,
-          },
-          30_000,
-        )
-        .catch((error) => {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          if (!hasGatewayOutput) {
-            startApiFallback(message);
-            return;
+      // Surface the approval to the renderer and wait for the user's choice.
+      // Never auto-approve: `approvals.mode: manual` must actually prompt, so
+      // recoverable flagged commands (curl|sh, chmod +x, sensitive writes, …)
+      // do not run unattended (issue #899).
+      const payload = event.payload as
+        | {
+            command?: unknown;
+            description?: unknown;
+            summary?: unknown;
+            choices?: unknown;
+            allow_permanent?: unknown;
           }
-          finish(message);
-        });
+        | undefined;
+      const choices = Array.isArray(payload?.choices)
+        ? payload.choices.map((c) => String(c))
+        : ["once", "deny"];
+      const command = String(
+        payload?.command ?? payload?.description ?? payload?.summary ?? "",
+      );
+      const allowPermanent =
+        payload?.allow_permanent === true || choices.includes("always");
+
+      // Register a resolver over the live gateway client; the renderer's
+      // choice arrives via the `approval-respond` IPC handler.
+      registerPendingApproval(activeSessionId, (choice, all) => {
+        void client
+          .request(
+            "approval.respond",
+            { session_id: activeSessionId, choice, all },
+            30_000,
+          )
+          .catch((error) => {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            if (!hasGatewayOutput) {
+              startApiFallback(message);
+              return;
+            }
+            finish(message);
+          });
+      });
+      cb.onApproval?.({
+        sessionId: activeSessionId,
+        command,
+        choices,
+        allowPermanent,
+      });
       return;
     }
 

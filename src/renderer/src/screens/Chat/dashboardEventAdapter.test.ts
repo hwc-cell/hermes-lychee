@@ -109,6 +109,26 @@ describe("mergeStreamedWithFinal", () => {
       "Hello there",
     );
   });
+
+  it("keeps a distinct CJK pre-tool segment instead of erasing it (#793)", () => {
+    // A Chinese pre-tool segment shares short repeated phrases with the final
+    // answer. The 3-char lossy probe used to misread it as a chunk-dropped
+    // copy and erase it; CJK text must stay on the concatenate path.
+    const streamed = "我来帮你查一下今天的天气。";
+    const final = "今天惠州多云转晴，气温 22–30℃。";
+    expect(mergeStreamedWithFinal(streamed, final)).toBe(
+      `${streamed}\n\n${final}`,
+    );
+  });
+
+  it("still replaces a genuine CJK superset with the final text", () => {
+    // The ⊇ branch still applies: when the final fully contains the streamed
+    // text, the final wins (this is the common "final is the fuller version"
+    // case, unaffected by the CJK lossy-skip).
+    const streamed = "你说得对";
+    const final = "你说得对，这是我输出的原始分析报告。";
+    expect(mergeStreamedWithFinal(streamed, final)).toBe(final);
+  });
 });
 
 describe("applyDashboardStreamEvent — message.complete text reconciliation", () => {

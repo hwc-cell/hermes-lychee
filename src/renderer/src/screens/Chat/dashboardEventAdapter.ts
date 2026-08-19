@@ -396,6 +396,19 @@ function normalizeText(value: string): string {
 }
 
 /**
+ * CJK script detection: Han ideographs (CJK Unified + Extensions + compat),
+ * kana, and Hangul. Used to disable the lossy chunk-dropped heuristic for CJK
+ * text, where a short (3-char) probe collides with genuinely repeated phrases
+ * and misreads a distinct segment as a damaged copy (#793).
+ */
+const CJK_RE =
+  /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]/;
+
+function hasCjk(value: string): boolean {
+  return CJK_RE.test(value);
+}
+
+/**
  * Length of the longest suffix of `a` that is also a prefix of `b`, used to
  * stitch a re-streamed boundary without duplicating the shared run. The
  * overlap is rejected when it would splice the middle of a word on either
@@ -470,7 +483,17 @@ export function mergeStreamedWithFinal(
   // length/coverage guards keep the pre-tool-call + answer pair (#746,
   // genuinely different texts) on the concatenate path: unrelated sentences
   // only embed as scattered fragments, never as contiguous chunk runs.
-  if (isLossyChunkCopy(normStreamed, normFinal)) {
+  //
+  // CJK is exempt: a 3-character probe collides with naturally repeated
+  // Chinese phrases, so a distinct pre-tool segment gets misread as a damaged
+  // copy and erased — the exact "missing characters / garbled words" report in
+  // #793. CJK deltas are rarely chunk-dropped, and the ⊇ branches above
+  // already cover the common cases, so skipping the heuristic is safe.
+  if (
+    !hasCjk(normStreamed) &&
+    !hasCjk(normFinal) &&
+    isLossyChunkCopy(normStreamed, normFinal)
+  ) {
     return finalContent;
   }
 

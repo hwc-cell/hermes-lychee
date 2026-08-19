@@ -370,6 +370,37 @@ export function useChatIPC({
       },
     );
 
+    const cleanupApproval = window.hermesAPI.onApprovalRequest(
+      (eventRunId, req) => {
+        if (!eventMatchesRun(eventRunId, runId)) return;
+        reasoningSegmentClosedRef.current = true;
+        setToolProgress(null);
+        setIsLoading(true);
+        setMessages((prev) => {
+          // Dedup on the session id so a re-emitted approval doesn't stack.
+          if (
+            prev.some(
+              (m) => m.kind === "approval" && m.sessionId === req.sessionId,
+            )
+          ) {
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              id: `approval-${req.sessionId || Date.now()}`,
+              kind: "approval",
+              role: "agent",
+              sessionId: req.sessionId,
+              command: req.command,
+              choices: Array.isArray(req.choices) ? req.choices : [],
+              allowPermanent: !!req.allowPermanent,
+            },
+          ];
+        });
+      },
+    );
+
     const cleanupToolProgress = window.hermesAPI.onChatToolProgress(
       (eventRunId, tool) => {
         if (!eventMatchesRun(eventRunId, runId)) return;
@@ -460,6 +491,7 @@ export function useChatIPC({
       cleanupDone();
       cleanupError();
       cleanupClarify();
+      cleanupApproval();
       cleanupToolProgress();
       cleanupToolEvent();
       cleanupUsage();

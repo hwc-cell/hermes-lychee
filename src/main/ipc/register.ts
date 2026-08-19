@@ -122,6 +122,7 @@ import {
   notifyProfileSwitched,
   setSshRemoteApiKey,
   resolvePendingClarify,
+  resolvePendingApproval,
 } from "../hermes";
 import {
   freshDashboardWebSocketUrl,
@@ -1593,6 +1594,9 @@ export function registerIpcHandlers(context: IpcContext): void {
           onClarify: (req) => {
             safeSend("chat-clarify-request", req);
           },
+          onApproval: (req) => {
+            safeSend("chat-approval-request", req);
+          },
         },
         profile,
         resumeSessionId,
@@ -1626,6 +1630,23 @@ export function registerIpcHandlers(context: IpcContext): void {
       return resolvePendingClarify(
         payload?.requestId ?? "",
         payload?.answer ?? "",
+      );
+    },
+  );
+
+  // Renderer's choice for a mid-run command approval. Resolves the pending
+  // gateway approval for the session, which forwards the choice to
+  // `approval.respond` (approve once / session / always / deny).
+  ipcMain.handle(
+    "approval-respond",
+    (
+      _event,
+      payload: { sessionId: string; choice: string; all: boolean },
+    ) => {
+      return resolvePendingApproval(
+        payload?.sessionId ?? "",
+        payload?.choice ?? "deny",
+        payload?.all === true,
       );
     },
   );
