@@ -26,7 +26,7 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:mac:unsigned": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ electron-builder --mac -c.mac.identity=null -c.mac.hardenedRuntime=false -c.mac.notarize=false",
+    "build:mac:unsigned": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ CUSTOM_DMGBUILD_PATH=.local-bin/dmgbuild electron-builder --mac -c.mac.identity=null -c.mac.hardenedRuntime=false -c.mac.notarize=false",
     "build:linux": "electron-vite build && electron-builder --linux",
     "build:rpm": "npm run build && electron-builder --linux rpm",
     "test:watch": "vitest"

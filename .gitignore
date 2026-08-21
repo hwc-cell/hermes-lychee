@@ -45,3 +45,6 @@ VoAPI/
 # Codex 误创建的子项目，不提交到 hermes-desktop
 ledger-api/
 ledger-web/
+
+# 本地缓存的打包二进制（dmgbuild）
+.local-bin/
