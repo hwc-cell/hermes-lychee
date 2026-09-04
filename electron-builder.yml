@@ -14,7 +14,7 @@ files:
   - "!VoAPI/**"
 asarUnpack:
   - resources/**
-  - node_modules/better-sqlite3/build/Release/*.node
+  - node_modules/better-sqlite3/prebuilds/*.node
 win:
   executableName: hermes-agent
   target:
@@ -58,7 +58,7 @@ linux:
     Hermes Lychee 是基于 fathah/hermes-desktop 的中文本地化魔改版，
     开箱支持国产大模型，面向小白用户。
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}-${arch}.${ext}
 deb:
   # Run chmod 4755 on chrome-sandbox so Electron's setuid sandbox helper
   # works on modern Linux distros that disable unprivileged user

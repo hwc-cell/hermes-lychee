@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荔枝粒子 · 效果预览</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #0b0d13; }
+    body { overflow: hidden; font-family: "LXGW FasmartGothic", "PingFang SC", sans-serif; color: #fff7f4; }
+    #scene { position: fixed; inset: 0; width: 100%; height: 100%; }
+    .grid { position: fixed; inset: 0; pointer-events: none; opacity: .22; background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px); background-size: 54px 54px; mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent); }
+    .copy { position: fixed; z-index: 1; top: clamp(25px, 5vw, 70px); left: clamp(24px, 7vw, 112px); max-width: 440px; pointer-events: none; }
+    .eyebrow { margin: 0 0 13px; color: #ffaaa4; font-size: 12px; font-weight: 700; letter-spacing: .18em; }
+    h1 { margin: 0; max-width: 9em; font-size: clamp(34px, 4.3vw, 66px); line-height: 1.08; letter-spacing: -.055em; font-weight: 700; }
+    .copy p { margin: 21px 0 0; color: #d1c7ce; font-size: clamp(14px, 1.25vw, 18px); line-height: 1.75; }
+    .hint { position: fixed; z-index: 1; right: clamp(24px, 5vw, 72px); bottom: clamp(22px, 4vw, 50px); color: rgba(255,247,244,.62); font-size: 13px; letter-spacing: .03em; }
+    @media (max-width: 680px) { .copy { top: 32px; left: 25px; max-width: 310px; } .copy p { max-width: 260px; } .hint { left: 25px; right: auto; bottom: 27px; } }
+    @media (prefers-reduced-motion: reduce) { .grid { display: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="scene" aria-label="流动光雾中的荔枝粒子图标"></canvas>
+  <div class="grid"></div>
+  <main class="copy">
+    <p class="eyebrow">LYCHEE LEDGER · EXPERIMENT</p>
+    <h1>会呼吸的<br>荔枝图标</h1>
+    <p>图标由图像像素采样成粒子。移动鼠标，粒子会短暂避让，然后回到原位。</p>
+  </main>
+  <div class="hint">移动鼠标，感受粒子流动</div>
+  <script>
+    (() => {
+      const canvas = document.querySelector('#scene');
+      const ctx = canvas.getContext('2d');
+      const image = new Image();
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const mouse = { x: -9999, y: -9999 };
+      let dots = [], width = 0, height = 0, start = performance.now();
+
+      function resize() {
+        const ratio = Math.min(devicePixelRatio || 1, 1.5);
+        width = innerWidth; height = innerHeight;
+        canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+        canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        if (image.complete) buildDots();
+      }
+
+      function buildDots() {
+        const size = Math.min(width * .57, height * .82, 680);
+        const off = document.createElement('canvas');
+        off.width = off.height = 220;
+        const octx = off.getContext('2d', { willReadFrequently: true });
+        octx.clearRect(0, 0, 220, 220);
+        octx.drawImage(image, 0, 0, 220, 220);
+        const pixels = octx.getImageData(0, 0, 220, 220).data;
+        const scale = size / 220;
+        const centerX = width * .65, centerY = height * .55;
+        const next = [];
+        for (let y = 2; y < 218; y += 3) for (let x = 2; x < 218; x += 3) {
+          const i = (y * 220 + x) * 4, alpha = pixels[i + 3];
+          if (alpha < 64 || Math.random() > alpha / 330) continue;
+          const tint = [pixels[i], pixels[i + 1], pixels[i + 2]];
+          const tx = centerX + (x - 110) * scale, ty = centerY + (y - 110) * scale;
+          next.push({ tx, ty, x: tx + (Math.random() - .5) * 80, y: ty + (Math.random() - .5) * 80, vx: 0, vy: 0, color: tint, a: .55 + alpha / 570, size: 1 + Math.random() * 1.35, seed: Math.random() * 10 });
+        }
+        dots = next;
+      }
+
+      function paint(now) {
+        const t = (now - start) / 1000;
+        ctx.clearRect(0, 0, width, height);
+        const wash = ctx.createRadialGradient(width * .69, height * .49, 0, width * .69, height * .49, Math.max(width, height) * .68);
+        wash.addColorStop(0, 'rgba(255, 88, 115, .16)'); wash.addColorStop(.31, 'rgba(130, 112, 255, .12)'); wash.addColorStop(.67, 'rgba(29, 179, 178, .09)'); wash.addColorStop(1, 'rgba(8, 10, 17, 0)');
+        ctx.fillStyle = wash; ctx.fillRect(0, 0, width, height);
+        const liquid = ctx.createLinearGradient(width * .35, height, width * .9, 0);
+        liquid.addColorStop(0, 'rgba(255, 84, 101, .11)'); liquid.addColorStop(.5, 'rgba(108, 147, 255, .08)'); liquid.addColorStop(1, 'rgba(115, 241, 194, .11)');
+        ctx.save(); ctx.filter = 'blur(42px)'; ctx.globalAlpha = .72;
+        for (let i = 0; i < 4; i++) { const x = width * (.43 + i * .13) + Math.sin(t * .38 + i * 1.7) * 70; const y = height * (.44 + Math.cos(t * .31 + i) * .11); ctx.beginPath(); ctx.ellipse(x, y, 200, 80, .4 + i * .21, 0, Math.PI * 2); ctx.fillStyle = liquid; ctx.fill(); }
+        ctx.restore();
+        for (const p of dots) {
+          const dx = p.x - mouse.x, dy = p.y - mouse.y, dist = Math.hypot(dx, dy) || 1;
+          let ax = (p.tx - p.x) * .016, ay = (p.ty + Math.sin(t * 1.2 + p.seed) * 1.7 - p.y) * .016;
+          if (!reduced && dist < 112) { const force = (112 - dist) / 112; ax += dx / dist * force * 2.8; ay += dy / dist * force * 2.8; }
+          p.vx = (p.vx + ax) * .87; p.vy = (p.vy + ay) * .87; p.x += p.vx; p.y += p.vy;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.a})`; ctx.fill();
+        }
+        if (!reduced) requestAnimationFrame(paint);
+      }
+      addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+      addEventListener('pointerleave', () => { mouse.x = mouse.y = -9999; });
+      addEventListener('resize', resize, { passive: true });
+      image.onload = () => { resize(); requestAnimationFrame(paint); };
+      image.src = './lychee-particle-preview-assets/bg.png';
+    })();
+  </script>
+</body>
+</html>

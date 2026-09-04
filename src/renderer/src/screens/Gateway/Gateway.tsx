@@ -145,7 +145,7 @@ function Gateway({ profile }: { profile?: string }): React.JSX.Element {
     };
   }, [profile]);
 
-  const platforms = catalog?.platforms ?? [];
+  const platforms = useMemo(() => catalog?.platforms ?? [], [catalog]);
 
   // Chinese domestic platforms — shown first in a dedicated section
   const CN_PLATFORM_IDS = new Set([
