@@ -3594,12 +3594,14 @@ export function stopGateway(
   const proc = gatewayProcesses.get(key);
   if (proc && isChildProcessAlive(proc)) {
     proc.kill("SIGTERM");
-    // Wait up to 2 s for the process to actually exit so the port is
-    // released before anyone tries to bind again (#7 / #16).
+    // Keep tracking the process until it really exits. Deleting it merely
+    // because a timeout elapsed lets a restart race the still-running gateway.
     const exited = new Promise<void>((resolve) => proc.once("exit", resolve));
     const timeout = new Promise<void>((resolve) => setTimeout(resolve, 2000));
     void Promise.race([exited, timeout]).then(() => {
-      gatewayProcesses.delete(key);
+      if (gatewayProcesses.get(key) === proc && !isChildProcessAlive(proc)) {
+        gatewayProcesses.delete(key);
+      }
     });
   } else {
     gatewayProcesses.delete(key);
@@ -3649,6 +3651,32 @@ function isChildProcessAlive(proc: ChildProcess): boolean {
   } catch {
     return false;
   }
+}
+
+function waitForChildProcessExit(
+  proc: ChildProcess | null,
+  timeoutMs: number,
+): Promise<boolean> {
+  if (!proc || !isChildProcessAlive(proc)) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (exited: boolean): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      proc.removeListener("exit", onExit);
+      proc.removeListener("close", onExit);
+      resolve(exited);
+    };
+    const onExit = (): void => finish(true);
+    const timer = setTimeout(
+      () => finish(!isChildProcessAlive(proc)),
+      Math.max(0, timeoutMs),
+    );
+    proc.once("exit", onExit);
+    proc.once("close", onExit);
+  });
 }
 
 export function isGatewayRunning(profile?: string): boolean {
@@ -3790,12 +3818,11 @@ async function restartGatewayLocallyOnce(
     const previousStartedByApp = appStartedProfiles.has(key);
     const previousPidEntry = readPidFileEntry(profile);
     stopGateway(profile, true);
-    const stopped = await waitForApiServerStopped(
-      profile,
-      stopTimeoutMs,
-      healthPollMs,
-    );
-    if (!stopped) {
+    const [processStopped, apiStopped] = await Promise.all([
+      waitForChildProcessExit(previousProcess, stopTimeoutMs),
+      waitForApiServerStopped(profile, stopTimeoutMs, healthPollMs),
+    ]);
+    if (!processStopped || !apiStopped) {
       console.error(
         `[gateway:${key}] Native restart failed: gateway did not stop before restart`,
       );

@@ -47,7 +47,7 @@ describe("MessageRow user Markdown", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByRole("table")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /copy/i }));
+    fireEvent.click(screen.getByRole("button", { name: "复制消息" }));
     expect(copyToClipboard).toHaveBeenCalledWith(source);
   });
 });

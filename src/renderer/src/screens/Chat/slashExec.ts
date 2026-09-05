@@ -30,7 +30,7 @@ interface SlashExecResponse {
 }
 
 type CommandDispatchResponse =
-  | { type: "exec" | "plugin"; output?: string }
+  | { type: "exec" | "plugin"; output?: string; warning?: string }
   | { type: "alias"; target: string }
   | { type: "skill"; name: string; message?: string }
   | { type: "send"; message: string };
@@ -141,7 +141,11 @@ function handleCommandDispatch(
   switch (dispatched.type) {
     case "exec":
     case "plugin":
-      sys(dispatched.output ?? "(no output)");
+      sys(
+        dispatched.warning
+          ? `warning: ${dispatched.warning}\n${dispatched.output ?? "(no output)"}`
+          : (dispatched.output ?? "(no output)"),
+      );
       return { kind: "done" };
 
     case "alias":
@@ -194,7 +198,11 @@ function parseCommandDispatch(raw: unknown): CommandDispatchResponse | null {
   switch (r.type) {
     case "exec":
     case "plugin":
-      return { type: r.type, output: str(r.output) };
+      return {
+        type: r.type,
+        output: str(r.output),
+        warning: str(r.warning),
+      };
     case "alias":
       return typeof r.target === "string"
         ? { type: "alias", target: r.target }
@@ -212,7 +220,13 @@ function parseCommandDispatch(raw: unknown): CommandDispatchResponse | null {
       // returns type="agent" or custom types). Fall back to type="exec"
       // if there's output text, so the user sees the result instead of
       // "invalid response: command.dispatch".
-      if (str(r.output)) return { type: "exec", output: str(r.output) };
+      if (str(r.output)) {
+        return {
+          type: "exec",
+          output: str(r.output),
+          warning: str(r.warning),
+        };
+      }
       if (typeof r.output === "object" && r.output !== null) {
         const inner = r.output as Record<string, unknown>;
         if (typeof inner.content === "string")

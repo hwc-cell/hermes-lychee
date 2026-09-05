@@ -696,6 +696,12 @@ export function providerRouteForEnvKey(envKey: string): {
   provider: string;
   baseUrl: string;
 } {
+  // Prefer the agent's native provider routes. Some setup cards also expose
+  // these keys through an OpenAI-compatible URL, but saving that route loses
+  // native behaviour (notably Kimi Coding) and can leave the provider unnamed.
+  const native = NATIVE_ENV_KEY_ROUTES[envKey];
+  if (native) return { ...native };
+
   // The setup array is a heterogeneous literal (not every entry carries
   // configProvider/baseUrl), so read it through a partial shape.
   type SetupRoute = {
@@ -715,8 +721,6 @@ export function providerRouteForEnvKey(envKey: string): {
   }
   const preset = LOCAL_PRESETS.find((p) => p.envKey === envKey);
   if (preset) return { provider: "custom", baseUrl: preset.baseUrl ?? "" };
-  const native = NATIVE_ENV_KEY_ROUTES[envKey];
-  if (native) return { ...native };
   return { provider: "custom", baseUrl: "" };
 }
 

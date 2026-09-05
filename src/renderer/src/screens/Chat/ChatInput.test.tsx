@@ -162,7 +162,7 @@ describe("ChatInput — slash command palette", () => {
 
     fireEvent.change(textarea, { target: { value: "/" } });
 
-    expect(screen.getByText("1000 commands")).toBeTruthy();
+    expect(screen.getByText("1000 chat.commandsTitle")).toBeTruthy();
     expect(screen.getAllByRole("option").length).toBeLessThan(30);
     expect(screen.getByText("command-0")).toBeTruthy();
     expect(screen.queryByText("command-999")).toBeNull();

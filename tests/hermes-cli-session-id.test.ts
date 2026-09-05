@@ -108,9 +108,11 @@ vi.mock("http", () => ({
               const res = new EventEmitter() as EventEmitter & {
                 statusCode: number;
                 headers: Record<string, string>;
+                setEncoding: ReturnType<typeof vi.fn>;
               };
               res.statusCode = Number(status);
               res.headers = {};
+              res.setEncoding = vi.fn();
               cb?.(res);
               queueMicrotask(() => {
                 res.emit(
@@ -130,9 +132,11 @@ vi.mock("http", () => ({
               const res = new EventEmitter() as EventEmitter & {
                 statusCode: number;
                 headers: Record<string, string>;
+                setEncoding: ReturnType<typeof vi.fn>;
               };
               res.statusCode = 200;
               res.headers = { "x-hermes-session-id": "desk-cold-gateway" };
+              res.setEncoding = vi.fn();
               cb?.(res);
               queueMicrotask(() => {
                 res.emit(
@@ -159,9 +163,11 @@ vi.mock("http", () => ({
             const res = new EventEmitter() as EventEmitter & {
               statusCode: number;
               headers: Record<string, string>;
+              setEncoding: ReturnType<typeof vi.fn>;
             };
             res.statusCode = 200;
             res.headers = { "x-hermes-session-id": "desk-cold-gateway" };
+            res.setEncoding = vi.fn();
             cb?.(res);
             queueMicrotask(() => {
               res.emit(

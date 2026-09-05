@@ -1,7 +1,6 @@
 import {
   APP_LOCALES,
   DEFAULT_ACTIVE_LOCALE,
-  FALLBACK_LOCALE,
   getLocale as getSharedLocale,
   setLocale as setSharedLocale,
   type AppLocale,

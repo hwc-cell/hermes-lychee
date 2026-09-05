@@ -615,7 +615,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   <kbd>tab</kbd> 补全
                 </span>
                 <span className="slash-menu-count">
-                  {filteredSlashCommands.length} 个指令
+                  {filteredSlashCommands.length} {t("chat.commandsTitle")}
                 </span>
               </div>
             </div>

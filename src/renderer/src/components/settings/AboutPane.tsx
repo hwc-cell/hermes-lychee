@@ -3,7 +3,6 @@ import {
   Calendar,
   Cpu,
   FolderOpen,
-  Loader,
   Monitor,
   Stethoscope,
 } from "lucide-react";
